@@ -1,0 +1,85 @@
+import uuid
+
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app.models.faq import Faq
+from app.schemas.common import fail_result, ok_result
+from app.schemas.faq import FaqCreate, FaqUpdate
+from app.services.sanitize import html_to_text
+
+
+def list_active_faqs(db: Session) -> list[Faq]:
+    return list(
+        db.scalars(
+            select(Faq).where(Faq.is_active.is_(True)).order_by(Faq.sort_order.asc(), Faq.created_at.asc())
+        ).all()
+    )
+
+
+def list_all_faqs(db: Session) -> list[Faq]:
+    return list(db.scalars(select(Faq).order_by(Faq.sort_order.asc(), Faq.created_at.asc())).all())
+
+
+def _clean_keywords(value: str | None) -> str | None:
+    if value is None:
+        return None
+    cleaned = html_to_text(value)
+    return cleaned[:300] or None
+
+
+def create_faq(db: Session, payload: FaqCreate) -> dict:
+    question = html_to_text(payload.question)
+    answer = html_to_text(payload.answer)
+    errors: dict[str, str] = {}
+    if len(question) < 3:
+        errors["question"] = "سؤال را وارد کنید"
+    if len(answer) < 3:
+        errors["answer"] = "پاسخ را وارد کنید"
+    if errors:
+        return fail_result("اطلاعات فرم را بررسی کنید", errors)
+
+    row = Faq(
+        question=question[:200],
+        answer=answer[:2000],
+        keywords=_clean_keywords(payload.keywords),
+        sort_order=payload.sort_order,
+        is_active=payload.is_active,
+    )
+    db.add(row)
+    db.commit()
+    return ok_result()
+
+
+def update_faq(db: Session, faq_id: uuid.UUID, payload: FaqUpdate) -> dict:
+    row = db.get(Faq, faq_id)
+    if not row:
+        return fail_result("سؤال یافت نشد")
+
+    data = payload.model_dump(exclude_unset=True)
+    if "question" in data and data["question"] is not None:
+        question = html_to_text(data["question"])
+        if len(question) < 3:
+            return fail_result("اطلاعات فرم را بررسی کنید", {"question": "سؤال را وارد کنید"})
+        data["question"] = question[:200]
+    if "answer" in data and data["answer"] is not None:
+        answer = html_to_text(data["answer"])
+        if len(answer) < 3:
+            return fail_result("اطلاعات فرم را بررسی کنید", {"answer": "پاسخ را وارد کنید"})
+        data["answer"] = answer[:2000]
+    if "keywords" in data:
+        data["keywords"] = _clean_keywords(data["keywords"])
+
+    for key, value in data.items():
+        setattr(row, key, value)
+    db.commit()
+    return ok_result()
+
+
+def delete_faq(db: Session, faq_id: uuid.UUID) -> dict:
+    row = db.get(Faq, faq_id)
+    if not row:
+        return fail_result("سؤال یافت نشد")
+    db.delete(row)
+    db.commit()
+    return ok_result()

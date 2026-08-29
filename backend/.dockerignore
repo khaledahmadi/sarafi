@@ -1,0 +1,7 @@
+# Ignore Python env / caches when mounting backend into the backend service
+.venv
+__pycache__
+*.pyc
+.pytest_cache
+.mypy_cache
+.env

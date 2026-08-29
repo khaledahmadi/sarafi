@@ -1,0 +1,105 @@
+import type { ColumnDef } from "@tanstack/react-table";
+import { Check, Trash2 } from "lucide-react";
+import { faDate } from "@/lib/site";
+import type { AdminComment } from "@/lib/comments-table";
+
+type CommentsColumnsProps = {
+  onApprove: (row: AdminComment) => void;
+  onDelete: (row: AdminComment) => void;
+  approvingId?: string | null;
+};
+
+export function createCommentsColumns({
+  onApprove,
+  onDelete,
+  approvingId = null,
+}: CommentsColumnsProps): ColumnDef<AdminComment>[] {
+  return [
+    {
+      id: "search",
+      accessorFn: (row) => `${row.article_title} ${row.author} ${row.body}`,
+      enableHiding: true,
+    },
+    {
+      accessorKey: "article_title",
+      header: "مقاله",
+      cell: ({ row }) => (
+        <p className="max-w-[12rem] font-semibold">{row.original.article_title}</p>
+      ),
+    },
+    {
+      accessorKey: "author",
+      header: "نویسنده",
+      cell: ({ row }) => <p className="whitespace-nowrap">{row.original.author}</p>,
+    },
+    {
+      accessorKey: "body",
+      header: "متن نظر",
+      enableSorting: false,
+      cell: ({ row }) => (
+        <p className="max-w-sm text-sm leading-6 text-muted-foreground line-clamp-2">
+          {row.original.body}
+        </p>
+      ),
+    },
+    {
+      id: "kind",
+      accessorFn: (row) => (row.is_reply ? "پاسخ" : "نظر"),
+      header: "نوع",
+      cell: ({ getValue }) => (
+        <span className="inline-flex rounded-full border border-border bg-secondary px-2.5 py-1 text-[11px] font-semibold text-secondary-foreground">
+          {String(getValue())}
+        </span>
+      ),
+    },
+    {
+      id: "status",
+      accessorFn: (row) => (row.is_approved ? "تأییدشده" : "در انتظار"),
+      header: "وضعیت",
+      cell: ({ row }) => (
+        <span
+          className={
+            row.original.is_approved
+              ? "inline-flex rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary"
+              : "inline-flex rounded-full border border-warning/40 bg-warning/15 px-2.5 py-1 text-[11px] font-semibold text-warning-foreground"
+          }
+        >
+          {row.original.is_approved ? "تأییدشده" : "در انتظار"}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "created_at",
+      header: "تاریخ",
+      cell: ({ row }) => (
+        <p className="whitespace-nowrap text-muted-foreground">{faDate(row.original.created_at)}</p>
+      ),
+    },
+    {
+      id: "actions",
+      header: "عملیات",
+      enableSorting: false,
+      cell: ({ row }) => (
+        <div className="flex flex-wrap items-center gap-2">
+          {row.original.is_approved ? null : (
+            <button
+              type="button"
+              disabled={approvingId === row.original.id}
+              onClick={() => onApprove(row.original)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold disabled:opacity-60"
+            >
+              <Check className="size-3.5" /> تأیید
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => onDelete(row.original)}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-destructive/40 px-3 py-1.5 text-xs font-semibold text-destructive disabled:opacity-60"
+          >
+            <Trash2 className="size-3.5" /> حذف
+          </button>
+        </div>
+      ),
+    },
+  ];
+}

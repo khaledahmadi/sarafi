@@ -1,0 +1,65 @@
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: sarafi_suite
+      POSTGRES_USER: sarafi_suite
+      POSTGRES_PASSWORD: sarafi_suite
+    ports:
+      - "5437:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sarafi_suite -d sarafi_suite"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    ports:
+      - "8003:8000"
+    environment:
+      - DATABASE_URL=postgresql://sarafi_suite:sarafi_suite@postgres:5432/sarafi_suite
+      - SECRET_KEY=dev-secret-change-in-production
+      - DEBUG=true
+      - ENVIRONMENT=development
+      - FRONTEND_URL=http://localhost:3004
+      - BACKEND_CORS_ORIGINS=http://localhost:3004,http://localhost:5173
+      - ACCESS_COOKIE_NAME=sarafi_suite_access
+      - REFRESH_COOKIE_NAME=sarafi_suite_refresh
+      - COOKIE_SECURE=false
+      - COOKIE_SAMESITE=lax
+      - SEED_ADMIN_EMAIL=admin@sarafi.local
+      - SEED_ADMIN_PASSWORD=Admin123!@#
+      - UPLOAD_DIR=uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    command: >
+      sh -c "alembic upgrade head &&
+             python -m app.services.seed &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3004:3000"
+    environment:
+      # Browser uses same-origin /api via Vite proxy (leave unset / empty)
+      - VITE_API_URL=
+      # Vite proxy + SSR target inside Compose network
+      - API_URL=http://backend:8000
+      - PORT=3000
+    depends_on:
+      - backend
+    volumes:
+      - .:/app
+      - /app/node_modules
+
+volumes:
+  postgres_data:

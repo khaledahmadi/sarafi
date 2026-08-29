@@ -1,0 +1,11 @@
+backend/.venv
+backend/uploads
+backend/__pycache__
+**/__pycache__
+.output
+.vercel/output
+node_modules
+.env
+.env.*
+!.env.example
+!example.env
