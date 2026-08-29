@@ -10,6 +10,7 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, useLayoutEffect, type ReactNode } from "react";
 import { Toaster } from "sonner";
+import { Analytics } from "@vercel/analytics/react";
 
 import appCss from "../styles.css?url";
 import { Header } from "../components/site/Header";
@@ -91,9 +92,21 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "Sarwari Sarafi" },
       { property: "og:title", content: "Sarwari Sarafi" },
       { name: "twitter:title", content: "Sarwari Sarafi" },
-      { name: "description", content: "Sarafi Digital Suite is a professional web application for managing and showcasing Sarafi services." },
-      { property: "og:description", content: "Sarafi Digital Suite is a professional web application for managing and showcasing Sarafi services." },
-      { name: "twitter:description", content: "Sarafi Digital Suite is a professional web application for managing and showcasing Sarafi services." },
+      {
+        name: "description",
+        content:
+          "Sarafi Digital Suite is a professional web application for managing and showcasing Sarafi services.",
+      },
+      {
+        property: "og:description",
+        content:
+          "Sarafi Digital Suite is a professional web application for managing and showcasing Sarafi services.",
+      },
+      {
+        name: "twitter:description",
+        content:
+          "Sarafi Digital Suite is a professional web application for managing and showcasing Sarafi services.",
+      },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
@@ -121,6 +134,7 @@ function RootShell({ children }: { children: ReactNode }) {
       <body>
         {children}
         <Scripts />
+        <Analytics />
       </body>
     </html>
   );
