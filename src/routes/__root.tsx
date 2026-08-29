@@ -11,6 +11,7 @@ import {
 import { useEffect, useLayoutEffect, type ReactNode } from "react";
 import { Toaster } from "sonner";
 import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 
 import appCss from "../styles.css?url";
 import { Header } from "../components/site/Header";
@@ -135,6 +136,7 @@ function RootShell({ children }: { children: ReactNode }) {
         {children}
         <Scripts />
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
