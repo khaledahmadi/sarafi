@@ -9,39 +9,39 @@ import { AppSelect } from "@/components/site/Field";
 import { DataTable } from "@/components/ui/data-table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRoles } from "@/hooks/use-session";
+import { useLocale } from "@/i18n";
 import {
   filterFeedbacks,
-  feedbackStatusLabels,
   isFeedbackStatusFilter,
   type FeedbackRow,
   type FeedbackStatusFilter,
 } from "@/lib/feedback-table";
 import { deleteAdminFeedback, listAdminFeedback, reviewFeedback } from "@/lib/portal.functions";
-import { faNum, site } from "@/lib/site";
+import { site } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/dashboard/feedback")({
   head: () => ({
     meta: [
-      { title: `بازخورد مشتریان | ${site.name}` },
-      { name: "description", content: "بررسی و مدیریت بازخورد مشتریان." },
+      { title: `Feedback | ${site.name}` },
       { name: "robots", content: "noindex" },
     ],
   }),
   component: FeedbackAdminPage,
 });
 
-const statusOptions: Array<{ value: FeedbackStatusFilter; label: string }> = [
-  { value: "all", label: "همه وضعیت‌ها" },
-  { value: "pending", label: feedbackStatusLabels.pending },
-  { value: "reviewed", label: feedbackStatusLabels.reviewed },
-];
-
 function FeedbackAdminPage() {
   const { isStaff } = useRoles();
+  const { t, n, d } = useLocale();
   const queryClient = useQueryClient();
   const [pendingDelete, setPendingDelete] = useState<FeedbackRow | null>(null);
   const [statusFilter, setStatusFilter] = useState<FeedbackStatusFilter>("all");
+
+  const statusOptions: Array<{ value: FeedbackStatusFilter; label: string }> = [
+    { value: "all", label: t("admin.allStatuses") },
+    { value: "pending", label: t("admin.feedbackPending") },
+    { value: "reviewed", label: t("admin.reviewed") },
+  ];
 
   const feedbacks = useQuery({
     queryKey: ["staff-feedback"],
@@ -61,10 +61,10 @@ function FeedbackAdminPage() {
         toast.error(result.message);
         return;
       }
-      toast.success("بازخورد بررسی شد");
+      toast.success(t("admin.feedbackReviewedToast"));
       invalidate();
     },
-    onError: () => toast.error("بررسی بازخورد ممکن نشد"),
+    onError: () => toast.error(t("admin.feedbackReviewFailed")),
   });
 
   const remove = useMutation({
@@ -74,10 +74,10 @@ function FeedbackAdminPage() {
         toast.error(result.message);
         return;
       }
-      toast.success("بازخورد حذف شد");
+      toast.success(t("admin.feedbackDeleted"));
       invalidate();
     },
-    onError: () => toast.error("حذف بازخورد ممکن نشد"),
+    onError: () => toast.error(t("admin.feedbackDeleteFailed")),
   });
 
   const rows = useMemo(() => feedbacks.data ?? [], [feedbacks.data]);
@@ -86,6 +86,9 @@ function FeedbackAdminPage() {
   const filteredRows = useMemo(() => filterFeedbacks(rows, statusFilter), [rows, statusFilter]);
 
   const columns = createFeedbackColumns({
+    t,
+    d,
+    n,
     onReview: (row) => review.mutate(row.id),
     onDelete: setPendingDelete,
     reviewingId: review.isPending ? review.variables : null,
@@ -94,10 +97,8 @@ function FeedbackAdminPage() {
   if (!isStaff) {
     return (
       <div className="p-6 card-elevated">
-        <h1 className="text-lg font-bold">دسترسی محدود</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          مدیریت بازخورد تنها برای کارمندان و مدیران سیستم در دسترس است.
-        </p>
+        <h1 className="text-lg font-bold">{t("admin.accessDeniedTitle")}</h1>
+        <p className="mt-2 text-sm text-muted-foreground">{t("admin.feedbackAccess")}</p>
       </div>
     );
   }
@@ -105,32 +106,32 @@ function FeedbackAdminPage() {
   return (
     <div className="space-y-6">
       <header>
-        <p className="text-xs font-semibold text-primary">مدیریت محتوا</p>
-        <h1 className="mt-1 text-2xl font-extrabold">بازخورد مشتریان</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          جست‌وجو، فیلتر و بررسی بازخوردهای ثبت‌شده توسط مشتریان.
-        </p>
+        <h1 className="text-2xl font-extrabold">{t("admin.feedbackAdminTitle")}</h1>
+        <p className="mt-2 text-sm text-muted-foreground">{t("admin.feedbackAdminSubtitle")}</p>
       </header>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <StatCard
-          label="همه بازخوردها"
+          label={t("admin.feedbackAll")}
           value={rows.length}
           loading={feedbacks.isLoading}
           icon={Star}
+          n={n}
         />
         <StatCard
-          label="در انتظار بررسی"
+          label={t("admin.feedbackPending")}
           value={pendingCount}
           loading={feedbacks.isLoading}
           icon={Clock3}
           tone={pendingCount > 0 ? "alert" : "default"}
+          n={n}
         />
         <StatCard
-          label="بررسی‌شده"
+          label={t("admin.feedbackReviewed")}
           value={reviewedCount}
           loading={feedbacks.isLoading}
           icon={CheckCircle2}
+          n={n}
         />
       </div>
 
@@ -139,16 +140,16 @@ function FeedbackAdminPage() {
           columns={columns}
           data={filteredRows}
           searchKey="search"
-          searchPlaceholder="جست‌وجو در مشتری یا متن…"
+          searchPlaceholder={t("admin.feedbackSearchPh")}
           loading={feedbacks.isLoading}
           emptyLabel={
-            rows.length === 0 ? "بازخوردی ثبت نشده است." : "با این فیلتر نتیجه‌ای پیدا نشد."
+            rows.length === 0 ? t("admin.feedbackEmpty") : t("admin.noResultsFilter")
           }
           toolbar={
             <div className="lg:w-56">
               <AppSelect
                 size="sm"
-                ariaLabel="فیلتر وضعیت"
+                ariaLabel={t("admin.statusFilter")}
                 value={statusFilter}
                 onValueChange={(value) => {
                   if (isFeedbackStatusFilter(value)) setStatusFilter(value);
@@ -162,9 +163,9 @@ function FeedbackAdminPage() {
 
       <ConfirmDeleteDialog
         open={Boolean(pendingDelete)}
-        title="حذف بازخورد"
+        title={t("admin.feedbackDeleteTitle")}
         itemName={pendingDelete?.author}
-        description="این بازخورد برای همیشه حذف می‌شود و دیگر قابل بازیابی نیست."
+        description={t("admin.feedbackDeleteDesc")}
         pending={remove.isPending}
         onOpenChange={(open) => !open && setPendingDelete(null)}
         onConfirm={() => {
@@ -182,12 +183,14 @@ function StatCard({
   loading,
   icon: Icon,
   tone = "default",
+  n,
 }: {
   label: string;
   value: number;
   loading: boolean;
   icon: typeof Star;
   tone?: "default" | "alert";
+  n: (value: number, digits?: number) => string;
 }) {
   return (
     <div
@@ -199,7 +202,7 @@ function StatCard({
       <div>
         <p className="text-xs font-medium text-muted-foreground">{label}</p>
         <div className="mt-1 text-lg font-extrabold">
-          {loading ? <Skeleton className="h-6 w-10" /> : faNum(value, 0)}
+          {loading ? <Skeleton className="h-6 w-10" /> : n(value, 0)}
         </div>
       </div>
       <span

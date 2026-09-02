@@ -5,7 +5,10 @@ import { SidebarCollapseToggle } from "@/components/site/SidebarCollapseToggle";
 
 export function ManageShell({ children }: { children: ReactNode }) {
   return (
-    <SidebarProvider className="min-h-[calc(100vh-var(--app-header-height))]">
+    <SidebarProvider
+      className="min-h-[calc(100vh-var(--app-header-height))]"
+      style={{ "--sidebar-width-icon": "3.75rem" } as React.CSSProperties}
+    >
       <div className="flex min-h-[calc(100vh-var(--app-header-height))] w-full">
         <ManageSidebar />
         <SidebarCollapseToggle />
