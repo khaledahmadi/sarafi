@@ -1,5 +1,5 @@
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -16,18 +16,21 @@ import {
   Trash2,
 } from "lucide-react";
 import { ConfirmDeleteDialog } from "@/components/site/ConfirmDeleteDialog";
+import { useLocale } from "@/i18n";
+import { RateSourcePicker } from "@/components/site/RateSourcePicker";
+import { useRateSource } from "@/hooks/use-rate-source";
 import { useRoles } from "@/hooks/use-session";
 import { AppSelect, NumberField, SearchableSelectField, TextField } from "@/components/site/Field";
 import { currencyCodeOptions, findCurrencyCode } from "@/lib/currency-codes";
 import { fieldClass, labelClass } from "@/lib/forms";
 import { deleteCurrency, listAdminCurrencies, saveCurrency } from "@/lib/portal.functions";
 import { currencySchema, fieldErrorMap, parseNum, validateRatePair } from "@/lib/validation";
-import { faDate, faNum, site } from "@/lib/site";
+import { site } from "@/lib/site";
 
 export const Route = createFileRoute("/_authenticated/dashboard/rates")({
   head: () => ({
     meta: [
-      { title: `مدیریت نرخ اسعار | ${site.name}` },
+      { title: `Rates | ${site.name}` },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -61,26 +64,27 @@ const emptyForm: FormState = {
 
 const pageSizes = [5, 10, 25, 50, 100];
 
-const sortLabels: Record<SortKey, string> = {
-  name_fa: "ارز",
-  buy_rate: "خرید",
-  sell_rate: "فروش",
-  is_active: "وضعیت",
-  updated_at: "آخرین بروزرسانی",
-};
-
-const statusLabels: Record<Exclude<StatusFilter, "all">, string> = {
-  active: "نمایش عمومی",
-  inactive: "غیرفعال",
-};
-
 function toRate(value: number | string) {
   const n = typeof value === "string" ? Number(value) : value;
   return Number.isNaN(n) ? 0 : n;
 }
 
 function RatesManagePage() {
+  const { t, n, d } = useLocale();
+  const sortLabels: Record<SortKey, string> = {
+    name_fa: t("admin.sortCurrency"),
+    buy_rate: t("admin.sortBuy"),
+    sell_rate: t("admin.sortSell"),
+    is_active: t("common.status"),
+    updated_at: t("admin.sortUpdated"),
+  };
+  const statusLabels: Record<Exclude<StatusFilter, "all">, string> = {
+    active: t("admin.publicVisible"),
+    inactive: t("admin.inactive"),
+  };
+
   const { isAdmin } = useRoles();
+  const { source, setSource } = useRateSource();
   const queryClient = useQueryClient();
   const [form, setForm] = useState<FormState>(emptyForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -92,9 +96,16 @@ function RatesManagePage() {
   const [pageSize, setPageSize] = useState(5);
   const [pendingDelete, setPendingDelete] = useState<Currency | null>(null);
 
+  useEffect(() => {
+    setForm(emptyForm);
+    setErrors({});
+    setPage(1);
+  }, [source]);
+
   const currencies = useQuery({
-    queryKey: ["admin-currencies"],
-    queryFn: listAdminCurrencies,
+    queryKey: ["admin-currencies", source],
+    queryFn: () => listAdminCurrencies(source),
+    refetchInterval: 30_000,
   });
 
   const takenCodes = (currencies.data ?? [])
@@ -114,6 +125,7 @@ function RatesManagePage() {
 
   const payloadOf = (state: FormState) => ({
     ...(state.id ? { id: state.id } : {}),
+    rate_source: source,
     code: state.code.trim().toUpperCase(),
     name_fa: state.name_fa,
     flag: state.flag,
@@ -128,11 +140,11 @@ function RatesManagePage() {
       const parsed = currencySchema.safeParse(payload);
       if (!parsed.success) {
         setErrors(fieldErrorMap(parsed.error));
-        throw new Error("اطلاعات وارد شده کامل نیست");
+        throw new Error(t("admin.formIncomplete"));
       }
       if (isDuplicateCode(payload.code)) {
-        setErrors({ code: "این کد ارز قبلاً ثبت شده است" });
-        throw new Error("این کد ارز قبلاً ثبت شده است");
+        setErrors({ code: t("admin.ratesCodeExists") });
+        throw new Error(t("admin.ratesCodeExists"));
       }
       setErrors({});
       return saveCurrency({ data: payload });
@@ -143,7 +155,7 @@ function RatesManagePage() {
         toast.error(result.message);
         return;
       }
-      toast.success(form.id ? "ارز ویرایش شد" : "ارز جدید ثبت شد");
+      toast.success(form.id ? t("admin.ratesSaved") : t("admin.ratesCreated"));
       setForm(emptyForm);
       invalidate();
     },
@@ -157,11 +169,11 @@ function RatesManagePage() {
         toast.error(result.message);
         return;
       }
-      toast.success("ارز حذف شد");
+      toast.success(t("admin.ratesDeleted"));
       setForm((prev) => (prev.id ? emptyForm : prev));
       invalidate();
     },
-    onError: () => toast.error("حذف ارز ممکن نشد"),
+    onError: () => toast.error(t("admin.ratesDeleteFailed")),
   });
 
   const counts = useMemo(() => {
@@ -234,10 +246,18 @@ function RatesManagePage() {
 
   function exportCsv() {
     if (filtered.length === 0) {
-      toast.error("داده‌ای برای خروجی وجود ندارد");
+      toast.error(t("admin.noDataExport"));
       return;
     }
-    const header = ["کد ارز", "نام فارسی", "پرچم", "نرخ خرید", "نرخ فروش", "وضعیت", "آخرین بروزرسانی"];
+    const header = [
+      t("admin.codeLabel"),
+      t("admin.nameFaLabel"),
+      t("admin.flagLabel"),
+      t("admin.buyRateLabel"),
+      t("admin.sellRateLabel"),
+      t("common.status"),
+      t("admin.sortUpdated"),
+    ];
     const cell = (value: string) => `"${value.replace(/"/g, '""')}"`;
     const lines = [
       header.map(cell).join(","),
@@ -262,34 +282,34 @@ function RatesManagePage() {
     link.download = `sarafi-rates-${new Date().toISOString().slice(0, 10)}.csv`;
     link.click();
     URL.revokeObjectURL(url);
-    toast.success(`خروجی CSV برای ${faNum(filtered.length, 0)} ارز آماده شد`);
+    toast.success(t("admin.ratesCsvReady", { count: n(filtered.length, 0) }));
   }
 
   if (!isAdmin) {
     return (
       <div className="p-6 card-elevated">
-        <h1 className="text-lg font-bold">دسترسی محدود</h1>
+        <h1 className="text-lg font-bold">{t("admin.accessDeniedTitle")}</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          مدیریت نرخ اسعار تنها برای مدیر سیستم مجاز است.
+          {t("admin.ratesAccess")}
         </p>
       </div>
     );
   }
 
   const stats = [
-    { label: "کل ارزها", value: counts.total, icon: BadgeDollarSign },
-    { label: "نمایش عمومی", value: counts.active, icon: Eye },
-    { label: "غیرفعال", value: counts.inactive, icon: EyeOff },
+    { label: t("admin.ratesTotal"), value: counts.total, icon: BadgeDollarSign },
+    { label: t("admin.publicVisible"), value: counts.active, icon: Eye },
+    { label: t("admin.inactive"), value: counts.inactive, icon: EyeOff },
   ];
 
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-extrabold">مدیریت نرخ اسعار</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          جست‌وجو کنید، فیلتر بزنید و ارزها را اضافه، ویرایش یا حذف کنید؛ تغییرات بلافاصله در صفحه
-          نرخ لحظه‌ای نمایش داده می‌شود.
-        </p>
+      <header className="space-y-4">
+        <div>
+          <h1 className="text-2xl font-extrabold">{t("admin.ratesTitle")}</h1>
+          <p className="mt-2 text-sm text-muted-foreground">{t("admin.ratesSubtitle")}</p>
+        </div>
+        <RateSourcePicker value={source} onChange={setSource} variant="inline" />
       </header>
 
       <div className="grid gap-3 sm:grid-cols-3">
@@ -300,7 +320,7 @@ function RatesManagePage() {
             </span>
             <div>
               <p className="text-xs text-muted-foreground">{stat.label}</p>
-              <p className="text-lg font-extrabold">{faNum(stat.value, 0)}</p>
+              <p className="text-lg font-extrabold">{n(stat.value, 0)}</p>
             </div>
           </div>
         ))}
@@ -311,7 +331,7 @@ function RatesManagePage() {
           <div className="grid gap-4 p-5 card-elevated lg:grid-cols-[1fr_13rem_11rem_auto] lg:items-end">
             <div>
               <label className={labelClass} htmlFor="rate-search">
-                جست‌وجوی ارز
+                {t("admin.ratesSearch")}
               </label>
               <div className="relative mt-2">
                 <Search className="pointer-events-none absolute end-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -319,7 +339,7 @@ function RatesManagePage() {
                   id="rate-search"
                   dir="rtl"
                   className={`${fieldClass} pe-10`}
-                  placeholder="نام، کد ارز یا پرچم"
+                  placeholder={t("admin.ratesSearchPh")}
                   value={search}
                   onChange={(e) => {
                     setSearch(e.target.value);
@@ -330,14 +350,14 @@ function RatesManagePage() {
             </div>
             <div>
               <label className={labelClass} htmlFor="rate-status-filter">
-                فیلتر وضعیت
+                {t("admin.statusFilter")}
               </label>
               <div className="mt-2">
                 <AppSelect
                   id="rate-status-filter"
                   value={statusFilter}
                   options={[
-                    { value: "all", label: "همه وضعیت‌ها" },
+                    { value: "all", label: t("admin.allStatuses") },
                     { value: "active", label: statusLabels.active },
                     { value: "inactive", label: statusLabels.inactive },
                   ]}
@@ -350,7 +370,7 @@ function RatesManagePage() {
             </div>
             <div>
               <label className={labelClass} htmlFor="rate-page-size">
-                تعداد در هر صفحه
+                {t("admin.pageSize")}
               </label>
               <div className="mt-2">
                 <AppSelect
@@ -358,7 +378,7 @@ function RatesManagePage() {
                   value={String(pageSize)}
                   options={pageSizes.map((size) => ({
                     value: String(size),
-                    label: `${faNum(size, 0)} ردیف`,
+                    label: `${t("admin.rows", { count: n(size, 0) })}`,
                   }))}
                   onValueChange={(value) => {
                     setPageSize(Number(value));
@@ -372,13 +392,12 @@ function RatesManagePage() {
               onClick={exportCsv}
               className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-bold text-primary-foreground"
             >
-              <Download className="size-4" /> خروجی CSV
+              <Download className="size-4" /> {t("admin.exportCsv")}
             </button>
           </div>
 
           <p className="text-xs text-muted-foreground">
-            نمایش {faNum(paginated.length, 0)} ارز از {faNum(filtered.length, 0)} نتیجه — صفحه{" "}
-            {faNum(currentPage, 0)} از {faNum(totalPages, 0)}
+            {t("admin.ratesShowing", { shown: n(paginated.length, 0), total: n(filtered.length, 0), page: n(currentPage, 0), pages: n(totalPages, 0) })}
           </p>
 
           <div className="overflow-x-auto card-elevated">
@@ -392,7 +411,7 @@ function RatesManagePage() {
                           type="button"
                           onClick={() => toggleSort(key)}
                           className="inline-flex items-center gap-1 font-semibold hover:text-primary"
-                          aria-label={`مرتب‌سازی بر اساس ${sortLabels[key]}`}
+                          aria-label={t("admin.sortBy", { label: sortLabels[key] })}
                         >
                           {sortLabels[key]}
                           <ArrowUpDown
@@ -400,21 +419,21 @@ function RatesManagePage() {
                           />
                           {sortKey === key && (
                             <span className="text-[10px] text-muted-foreground">
-                              {sortDir === "asc" ? "صعودی" : "نزولی"}
+                              {sortDir === "asc" ? t("admin.asc") : t("admin.desc")}
                             </span>
                           )}
                         </button>
                       </th>
                     ),
                   )}
-                  <th className="px-4 py-3 font-semibold">عملیات</th>
+                  <th className="px-4 py-3 font-semibold">{t("common.actions")}</th>
                 </tr>
               </thead>
               <tbody>
                 {!currencies.isLoading && filtered.length === 0 && (
                   <tr>
                     <td className="px-4 py-10 text-center text-muted-foreground" colSpan={columnCount}>
-                      ارزی با این مشخصات یافت نشد.
+                      {t("admin.ratesEmpty")}
                     </td>
                   </tr>
                 )}
@@ -434,7 +453,7 @@ function RatesManagePage() {
                             <span className="font-semibold">{currency.name_fa}</span>
                             {form.id === currency.id && (
                               <span className="ms-2 rounded-full bg-accent/20 px-2 py-0.5 text-[10px] font-bold text-accent-foreground">
-                                در حال ویرایش
+                                {t("admin.editing")}
                               </span>
                             )}
                             <span
@@ -446,8 +465,8 @@ function RatesManagePage() {
                           </span>
                         </div>
                       </td>
-                      <td className="px-4 py-3 tabular-nums">{faNum(toRate(currency.buy_rate))}</td>
-                      <td className="px-4 py-3 tabular-nums">{faNum(toRate(currency.sell_rate))}</td>
+                      <td className="px-4 py-3 tabular-nums">{n(toRate(currency.buy_rate))}</td>
+                      <td className="px-4 py-3 tabular-nums">{n(toRate(currency.sell_rate))}</td>
                       <td className="px-4 py-3">
                         <span
                           className={`rounded-full border px-2.5 py-1 text-xs font-bold ${
@@ -460,7 +479,7 @@ function RatesManagePage() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-xs text-muted-foreground">
-                        {faDate(currency.updated_at)}
+                        {d(currency.updated_at)}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex gap-2">
@@ -469,7 +488,7 @@ function RatesManagePage() {
                             onClick={() => startEdit(currency)}
                             className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold"
                           >
-                            <Pencil className="size-3.5" /> ویرایش
+                            <Pencil className="size-3.5" /> {t("common.edit")}
                           </button>
                           <button
                             type="button"
@@ -477,7 +496,7 @@ function RatesManagePage() {
                             onClick={() => setPendingDelete(currency)}
                             className="inline-flex items-center gap-1.5 rounded-lg border border-destructive/40 px-3 py-1.5 text-xs font-semibold text-destructive disabled:opacity-60"
                           >
-                            <Trash2 className="size-3.5" /> حذف
+                            <Trash2 className="size-3.5" /> {t("common.delete")}
                           </button>
                         </div>
                       </td>
@@ -490,7 +509,7 @@ function RatesManagePage() {
 
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-xs text-muted-foreground">
-              صفحه {faNum(currentPage, 0)} از {faNum(totalPages, 0)}
+              {t("admin.pageOf", { page: n(currentPage, 0), pages: n(totalPages, 0) })}
             </p>
             <div className="flex items-center gap-2">
               <button
@@ -499,7 +518,7 @@ function RatesManagePage() {
                 disabled={currentPage <= 1}
                 className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-2 text-xs font-semibold disabled:opacity-40"
               >
-                <ChevronRight className="size-3.5" /> قبلی
+                <ChevronRight className="size-3.5" /> {t("common.previous")}
               </button>
               <button
                 type="button"
@@ -507,7 +526,7 @@ function RatesManagePage() {
                 disabled={currentPage >= totalPages}
                 className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-2 text-xs font-semibold disabled:opacity-40"
               >
-                بعدی <ChevronLeft className="size-3.5" />
+                {t("common.next")} <ChevronLeft className="size-3.5" />
               </button>
             </div>
           </div>
@@ -520,18 +539,18 @@ function RatesManagePage() {
           }}
           className="h-fit space-y-4 p-5 card-elevated"
         >
-          <h2 className="text-base font-bold">{form.id ? "ویرایش ارز" : "افزودن ارز"}</h2>
+          <h2 className="text-base font-bold">{form.id ? t("admin.ratesEdit") : t("admin.ratesAdd")}</h2>
           <SearchableSelectField
-            label="کد ارز"
-            hint="کد یا نام ارز را جست‌وجو کنید"
+            label={t("admin.codeLabel")}
+            hint={t("admin.currencyCodeSearchHint")}
             value={form.code}
             error={errors["code"]}
             options={currencyCodeOptions(form.code, { excludeCodes: takenCodes })}
-            placeholder="انتخاب کد ارز"
-            searchPlaceholder="جست‌وجوی کد یا نام ارز…"
+            placeholder={t("admin.selectCurrencyCode")}
+            searchPlaceholder={t("admin.searchCurrencyCodePh")}
             onValueChange={(code) => {
               if (isDuplicateCode(code)) {
-                setErrors((p) => ({ ...p, code: "این کد ارز قبلاً ثبت شده است" }));
+                setErrors((p) => ({ ...p, code: t("admin.ratesCodeExists") }));
                 return;
               }
               const meta = findCurrencyCode(code);
@@ -545,15 +564,15 @@ function RatesManagePage() {
             }}
           />
           <TextField
-            label="نام فارسی ارز"
+            label={t("admin.nameFaCurrency")}
             value={form.name_fa}
             error={errors["name_fa"]}
             onChange={(e) => setForm((p) => ({ ...p, name_fa: e.target.value }))}
-            placeholder="دالر آمریکا"
+            placeholder="USD"
           />
           <TextField
-            label="پرچم"
-            hint="با انتخاب کد ارز به‌صورت خودکار پر می‌شود"
+            label={t("admin.flagLabel")}
+            hint={t("admin.nameFaAutoHint")}
             value={form.flag}
             readOnly
             tabIndex={-1}
@@ -562,7 +581,7 @@ function RatesManagePage() {
           />
           <div className="grid grid-cols-2 gap-3">
             <NumberField
-              label="نرخ خرید"
+              label={t("admin.buyRateLabel")}
               value={form.buy}
               error={errors["buy_rate"]}
               placeholder="0.00"
@@ -579,7 +598,7 @@ function RatesManagePage() {
               }}
             />
             <NumberField
-              label="نرخ فروش"
+              label={t("admin.sellRateLabel")}
               value={form.sell}
               error={errors["sell_rate"]}
               placeholder="0.00"
@@ -603,7 +622,7 @@ function RatesManagePage() {
               onChange={(e) => setForm((p) => ({ ...p, is_active: e.target.checked }))}
               className="size-4 accent-primary"
             />
-            نمایش در سایت عمومی
+            {t("admin.showOnSite")}
           </label>
           <div className="flex flex-wrap gap-2 pt-1">
             <button
@@ -612,7 +631,7 @@ function RatesManagePage() {
               className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground disabled:opacity-60"
             >
               <Plus className="size-4" />
-              {save.isPending ? "در حال ذخیره…" : form.id ? "ذخیره تغییرات" : "ثبت ارز"}
+              {save.isPending ? t("admin.saving") : form.id ? t("admin.saveChanges") : t("admin.registerCurrency")}
             </button>
             {form.id && (
               <button
@@ -623,7 +642,7 @@ function RatesManagePage() {
                 }}
                 className="rounded-lg border border-border px-4 py-2.5 text-sm font-semibold"
               >
-                لغو ویرایش
+                {t("admin.cancelEdit")}
               </button>
             )}
           </div>
@@ -632,13 +651,13 @@ function RatesManagePage() {
 
       <ConfirmDeleteDialog
         open={Boolean(pendingDelete)}
-        title="حذف ارز"
+        title={t("admin.ratesDeleteTitle")}
         itemName={
           pendingDelete
             ? `${pendingDelete.name_fa} (${pendingDelete.code})`
             : undefined
         }
-        description="این ارز و نرخ آن از صفحه عمومی برداشته می‌شود و دیگر قابل بازیابی نیست."
+        description={t("admin.ratesDeleteDesc")}
         pending={remove.isPending}
         onOpenChange={(open) => !open && setPendingDelete(null)}
         onConfirm={() => {

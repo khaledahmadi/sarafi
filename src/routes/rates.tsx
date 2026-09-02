@@ -1,43 +1,40 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useSuspenseQuery } from "@tanstack/react-query";
-import { ratesQuery, settingsQuery } from "@/lib/queries";
+import { settingsQuery, prefetchRateSources } from "@/lib/queries";
+import { useRateSource } from "@/hooks/use-rate-source";
+import { useRates } from "@/hooks/use-rates";
 import { RateTable } from "@/components/site/RateTable";
 import { CurrencyConverter } from "@/components/site/CurrencyConverter";
 import { PageHero } from "@/components/site/Sections";
-import { site } from "@/lib/site";
 import { useSiteSettings } from "@/hooks/use-settings";
-
-const title = `نرخ لحظه‌ای اسعار | ${site.name}`;
-const description =
-  "جدول نرخ خرید و فروش دالر، یورو، یوان، درهم و سایر ارزها بر مبنای افغانی، با بروزرسانی لحظه‌ای.";
+import { useLocale } from "@/i18n";
+import { pageMeta, resolvePageLocale } from "@/i18n/meta";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/rates")({
-  head: () => ({
-    meta: [
-      { title },
-      { name: "description", content: description },
-      { property: "og:title", content: title },
-      { property: "og:description", content: description },
-    ],
-  }),
   loader: async ({ context }) => {
+    const locale = await resolvePageLocale();
     await Promise.all([
-      context.queryClient.ensureQueryData(ratesQuery),
+      prefetchRateSources(context.queryClient),
       context.queryClient.ensureQueryData(settingsQuery),
     ]);
+    return { locale };
   },
+  head: ({ loaderData }) =>
+    pageMeta(loaderData?.locale ?? "fa", "meta.ratesTitle", "meta.ratesDescription"),
   component: RatesPage,
 });
 
 function RatesPage() {
-  const { data: rates } = useSuspenseQuery(ratesQuery);
+  const { source } = useRateSource();
+  const { data: rates = [], isFetching: ratesFetching } = useRates(source);
   const { get } = useSiteSettings();
+  const { t } = useLocale();
 
   return (
     <>
       <PageHero
         variant="spotlight"
-        eyebrow="بازار ارز"
+        eyebrow={t("rates.eyebrow")}
         title={get("rates.hero_title")}
         description={get("rates.hero_description")}
       />
@@ -47,8 +44,13 @@ function RatesPage() {
             {get("rates.notice")}
           </div>
         )}
-        <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,400px)] lg:items-start">
-          <RateTable rates={rates} />
+        <div
+          className={cn(
+            "grid min-w-0 gap-6 transition-opacity duration-200 lg:grid-cols-[minmax(0,1fr)_minmax(0,400px)] lg:items-start",
+            ratesFetching && "opacity-80",
+          )}
+        >
+          <RateTable rates={rates} source={source} />
           <CurrencyConverter rates={rates} />
         </div>
       </div>

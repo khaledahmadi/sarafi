@@ -25,19 +25,20 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useLocale } from "@/i18n";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRoles } from "@/hooks/use-session";
 import { TextAreaField, TextField } from "@/components/site/Field";
 import { fieldClassSm } from "@/lib/forms";
 import { listAdminSettings, saveSettings } from "@/lib/portal.functions";
 import { settingsSchema } from "@/lib/validation";
-import { faNum, site } from "@/lib/site";
+import { site } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/dashboard/pages")({
   head: () => ({
     meta: [
-      { title: `محتوای صفحات | ${site.name}` },
+      { title: `Pages | ${site.name}` },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -63,57 +64,63 @@ type GroupMeta = {
 
 const GROUP_ORDER = ["brand", "home", "about", "contact", "services", "rates", "branches"] as const;
 
-const groupMeta: Record<string, GroupMeta> = {
-  brand: {
-    title: "برند",
-    description: "نام، شعار، معرفی کوتاه و سال شروع فعالیت برای محاسبه سال تجربه.",
-    href: "/",
-    icon: Sparkles,
-  },
-  home: {
-    title: "صفحه اصلی",
-    description:
-      "متن‌های صفحه نخست. آمار سال تجربه، نمایندگی و ارز از داده‌های سیستم محاسبه می‌شود.",
-    href: "/",
-    icon: Home,
-  },
-  about: {
-    title: "درباره ما",
-    description: "داستان مجموعه، ارزش‌ها و آمارهایی که در صفحه درباره ما نمایش داده می‌شوند.",
-    href: "/about",
-    icon: Building2,
-  },
-  contact: {
-    title: "تماس با ما",
-    description: "شماره تماس، واتساپ، ایمیل، آدرس و ساعات کاری دفتر مرکزی.",
-    href: "/contact",
-    icon: Phone,
-  },
-  services: {
-    title: "خدمات",
-    description: "عنوان و توضیح صفحه خدمات و متن دعوت به ثبت حواله.",
-    href: "/services",
-    icon: Sparkles,
-  },
-  rates: {
-    title: "نرخ‌ها",
-    description: "عنوان و اعلامیه صفحه نرخ لحظه‌ای اسعار.",
-    href: "/rates",
-    icon: BadgeDollarSign,
-  },
-  branches: {
-    title: "نمایندگی‌ها",
-    description: "عنوان و توضیح صفحه شبکه دفاتر و نمایندگی‌ها.",
-    href: "/branches",
-    icon: MapPin,
-  },
-};
+function buildGroupMeta(t: (key: string) => string): Record<string, GroupMeta> {
+  return {
+    brand: {
+      title: t("admin.groupBrand"),
+      description: t("admin.groupBrandDesc"),
+      href: "/",
+      icon: Sparkles,
+    },
+    home: {
+      title: t("admin.groupHome"),
+      description: t("admin.groupHomeDesc"),
+      href: "/",
+      icon: Home,
+    },
+    about: {
+      title: t("admin.groupAbout"),
+      description: t("admin.groupAboutDesc"),
+      href: "/about",
+      icon: Building2,
+    },
+    contact: {
+      title: t("admin.groupContactFull"),
+      description: t("admin.groupContactDesc"),
+      href: "/contact",
+      icon: Phone,
+    },
+    services: {
+      title: t("admin.groupServices"),
+      description: t("admin.groupServicesDesc"),
+      href: "/services",
+      icon: Sparkles,
+    },
+    rates: {
+      title: t("admin.groupRates"),
+      description: t("admin.groupRatesDesc"),
+      href: "/rates",
+      icon: BadgeDollarSign,
+    },
+    branches: {
+      title: t("admin.groupBranches"),
+      description: t("admin.groupBranchesDesc"),
+      href: "/branches",
+      icon: MapPin,
+    },
+  };
+}
 
-function metaFor(groupKey: string): GroupMeta {
+
+function metaFor(
+  groupKey: string,
+  groupMeta: Record<string, GroupMeta>,
+  t: (key: string) => string,
+): GroupMeta {
   return (
     groupMeta[groupKey] ?? {
       title: groupKey,
-      description: "متن‌های این بخش در سایت عمومی نمایش داده می‌شوند.",
+      description: t("admin.groupFallbackDesc"),
       href: "/",
       icon: Sparkles,
     }
@@ -150,6 +157,8 @@ function PagesSkeleton() {
 }
 
 function PagesManagePage() {
+  const { t, n, d } = useLocale();
+  const groupMeta = buildGroupMeta(t);
   const { isAdmin, loading } = useRoles();
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState<Record<string, string>>({});
@@ -206,7 +215,7 @@ function PagesManagePage() {
   const visibleGroups = useMemo(() => {
     if (!term) return groups;
     return groups.filter(([groupKey, rows]) => {
-      const meta = metaFor(groupKey);
+      const meta = metaFor(groupKey, groupMeta, t);
       if (meta.title.toLowerCase().includes(term) || groupKey.includes(term)) return true;
       return rows.some(
         (row) =>
@@ -230,7 +239,7 @@ function PagesManagePage() {
 
   const shortRows = activeRows.filter((row) => row.input_kind === "text");
   const longRows = activeRows.filter((row) => row.input_kind !== "text");
-  const activeMeta = metaFor(activeGroup);
+  const activeMeta = metaFor(activeGroup, groupMeta, t);
   const ActiveIcon = activeMeta.icon;
   const dirtyCount = dirtyKeys.size;
 
@@ -251,7 +260,7 @@ function PagesManagePage() {
         .map((row) => ({ key: row.key, value: draft[row.key] ?? "" }));
       const parsed = settingsSchema.safeParse({ values });
       if (!parsed.success) {
-        throw new Error(parsed.error.issues[0]?.message ?? "اطلاعات وارد شده معتبر نیست");
+        throw new Error(parsed.error.issues[0]?.message ?? t("admin.pagesFormInvalid"));
       }
       const result = await saveSettings({ data: { values } });
       if (!result.ok) throw new Error(result.message);
@@ -267,7 +276,7 @@ function PagesManagePage() {
         queryClient.invalidateQueries({ queryKey: ["admin-settings"] }),
         queryClient.invalidateQueries({ queryKey: ["site-settings"] }),
       ]);
-      toast.success("محتوای سایت ذخیره شد");
+      toast.success(t("admin.pagesSaved"));
     },
     onError: (error: Error) => toast.error(error.message),
   });
@@ -276,7 +285,7 @@ function PagesManagePage() {
     if (!settings.data) return;
     setDraft(Object.fromEntries(settings.data.map((row) => [row.key, row.value])));
     setConfirmDiscard(false);
-    toast.success("تغییرات لغو شد");
+    toast.success(t("admin.pagesDiscarded"));
   }
 
   function updateField(key: string, value: string) {
@@ -290,9 +299,9 @@ function PagesManagePage() {
   if (!isAdmin) {
     return (
       <div className="mx-auto max-w-lg p-8 text-center card-elevated">
-        <h1 className="text-lg font-bold">دسترسی محدود</h1>
+        <h1 className="text-lg font-bold">{t("admin.accessDeniedTitle")}</h1>
         <p className="mt-2 text-sm leading-7 text-muted-foreground">
-          ویرایش محتوای صفحات تنها برای مدیر سیستم مجاز است.
+          {t("admin.pagesAccess")}
         </p>
       </div>
     );
@@ -302,9 +311,9 @@ function PagesManagePage() {
     <div className="space-y-6">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-extrabold">محتوای صفحات</h1>
+          <h1 className="text-2xl font-extrabold">{t("admin.pagesTitle")}</h1>
           <p className="mt-2 max-w-xl text-sm leading-7 text-muted-foreground">
-            هر بخش را جداگانه ویرایش کنید. فقط همان متن در سایت عمومی به‌روز می‌شود.
+            {t("admin.pagesSubtitle")}
           </p>
         </div>
         <label className="relative w-full sm:max-w-72">
@@ -313,16 +322,16 @@ function PagesManagePage() {
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="جستجوی عنوان یا متن…"
+            placeholder={t("admin.pagesSearchPh")}
             className={cn(fieldClassSm, "w-full pe-10")}
           />
         </label>
       </header>
 
       <div className="grid items-start gap-6 lg:grid-cols-[16rem_minmax(0,1fr)]">
-        <nav aria-label="بخش‌های محتوا" className="flex gap-2 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible">
+        <nav aria-label={t("admin.pagesNavAria")} className="flex gap-2 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible">
           {visibleGroups.map(([groupKey, rows]) => {
-            const meta = metaFor(groupKey);
+            const meta = metaFor(groupKey, groupMeta, t);
             const Icon = meta.icon;
             const changed = dirtyByGroup.get(groupKey) ?? 0;
             const selected = groupKey === activeGroup;
@@ -348,18 +357,18 @@ function PagesManagePage() {
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-semibold text-foreground">{meta.title}</span>
-                  <span className="mt-0.5 block text-xs text-muted-foreground">{faNum(rows.length)} فیلد</span>
+                  <span className="mt-0.5 block text-xs text-muted-foreground">{t("admin.pagesFields", { count: n(rows.length, 0) })}</span>
                 </span>
                 {changed > 0 ? (
                   <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-bold text-accent">
-                    {faNum(changed)}
+                    {n(changed)}
                   </span>
                 ) : null}
               </button>
             );
           })}
           {visibleGroups.length === 0 ? (
-            <p className="rounded-xl bg-secondary px-4 py-6 text-sm text-muted-foreground">موردی یافت نشد.</p>
+            <p className="rounded-xl bg-secondary px-4 py-6 text-sm text-muted-foreground">{t("admin.pagesNone")}</p>
           ) : null}
         </nav>
 
@@ -380,7 +389,7 @@ function PagesManagePage() {
               rel="noreferrer"
               className="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-primary hover:bg-primary/10"
             >
-              مشاهده صفحه
+              {t("admin.pagesView")}
               <ExternalLink className="size-3.5" />
             </Link>
           </div>
@@ -388,7 +397,7 @@ function PagesManagePage() {
           <div className="space-y-5 p-5 sm:p-6">
             {activeRows.length === 0 ? (
               <p className="rounded-xl bg-secondary px-4 py-8 text-center text-sm text-muted-foreground">
-                در این بخش فیلدی برای نمایش نیست.
+                {t("admin.pagesNoFields")}
               </p>
             ) : (
               <>
@@ -420,7 +429,7 @@ function PagesManagePage() {
                         onChange={(event) => updateField(row.key, event.target.value)}
                       />
                       <p className="text-end text-xs text-muted-foreground">
-                        {faNum(length)} از {faNum(limit)} نویسه
+                        {t("admin.pagesChars", { length: n(length, 0), limit: n(limit, 0) })}
                       </p>
                     </div>
                   );
@@ -438,7 +447,7 @@ function PagesManagePage() {
         )}
       >
         <p className="text-sm text-muted-foreground">
-          {dirtyCount === 0 ? "همه تغییرات ذخیره شده‌اند." : `${faNum(dirtyCount)} تغییر ذخیره‌نشده`}
+          {dirtyCount === 0 ? t("admin.pagesAllSaved") : t("admin.pagesDirty", { count: n(dirtyCount, 0) })}
         </p>
         <div className="flex flex-wrap gap-2">
           <button
@@ -448,7 +457,7 @@ function PagesManagePage() {
             className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border px-4 text-sm font-medium disabled:opacity-50"
           >
             <RotateCcw className="size-4" />
-            انصراف
+            {t("common.cancel")}
           </button>
           <button
             type="button"
@@ -457,7 +466,7 @@ function PagesManagePage() {
             className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary px-5 text-sm font-bold text-primary-foreground disabled:opacity-50"
           >
             <Save className="size-4" />
-            {save.isPending ? "در حال ذخیره…" : "ذخیره تغییرات"}
+            {save.isPending ? t("admin.saving") : t("admin.saveChanges")}
           </button>
         </div>
       </div>
@@ -465,14 +474,14 @@ function PagesManagePage() {
       <AlertDialog open={confirmDiscard} onOpenChange={setConfirmDiscard}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>لغو تغییرات؟</AlertDialogTitle>
+            <AlertDialogTitle>{t("admin.pagesDiscardTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              {faNum(dirtyCount)} تغییر ذخیره‌نشده به حالت قبلی برمی‌گردد.
+              {t("admin.pagesDiscardBody", { count: n(dirtyCount, 0) })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>ادامه ویرایش</AlertDialogCancel>
-            <AlertDialogAction onClick={discard}>لغو تغییرات</AlertDialogAction>
+            <AlertDialogCancel>{t("admin.pagesContinue")}</AlertDialogCancel>
+            <AlertDialogAction onClick={discard}>{t("admin.pagesDiscard")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

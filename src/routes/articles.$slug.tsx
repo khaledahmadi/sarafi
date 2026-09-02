@@ -3,7 +3,8 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { articleCommentsQuery, articleQuery, articlesQuery } from "@/lib/queries";
 import { ArticleComments } from "@/components/site/ArticleComments";
 import { ArticleShareBar } from "@/components/site/ArticleShareBar";
-import { faDate, site } from "@/lib/site";
+import { pickLocalized, useLocale } from "@/i18n";
+import { site } from "@/lib/site";
 
 export const Route = createFileRoute("/articles/$slug")({
   loader: async ({ context, params }) => {
@@ -17,14 +18,14 @@ export const Route = createFileRoute("/articles/$slug")({
   },
   head: ({ loaderData }) => {
     if (!loaderData) {
-      return { meta: [{ title: "مقاله یافت نشد" }, { name: "robots", content: "noindex" }] };
+      return { meta: [{ title: "Article not found" }, { name: "robots", content: "noindex" }] };
     }
-    const t = `${loaderData.article.title_fa} | ${site.name}`;
+    const title = `${loaderData.article.title_fa} | ${site.name}`;
     return {
       meta: [
-        { title: t },
+        { title },
         { name: "description", content: loaderData.article.excerpt_fa },
-        { property: "og:title", content: t },
+        { property: "og:title", content: title },
         { property: "og:description", content: loaderData.article.excerpt_fa },
       ],
     };
@@ -34,11 +35,12 @@ export const Route = createFileRoute("/articles/$slug")({
 });
 
 function ArticleNotFound() {
+  const { t } = useLocale();
   return (
     <div className="mx-auto max-w-2xl px-4 py-24 text-center">
-      <h1 className="text-2xl font-bold">این مقاله یافت نشد</h1>
+      <h1 className="text-2xl font-bold">{t("articles.notFound")}</h1>
       <Link to="/articles" className="mt-6 inline-block text-sm font-semibold text-primary">
-        بازگشت به فهرست مقالات
+        {t("articles.backToList")}
       </Link>
     </div>
   );
@@ -48,8 +50,11 @@ function ArticlePage() {
   const { slug } = Route.useParams();
   const { data: article } = useSuspenseQuery(articleQuery(slug));
   const { data: articles } = useSuspenseQuery(articlesQuery);
+  const { locale, t, d } = useLocale();
   if (!article) return <ArticleNotFound />;
 
+  const title = pickLocalized(article, "title", locale);
+  const body = pickLocalized(article, "body", locale) || article.body_fa;
   const related = articles.filter((item) => item.slug !== article.slug).slice(0, 3);
   const hasRelated = related.length > 0;
 
@@ -63,31 +68,31 @@ function ArticlePage() {
             }`}
           >
             <h1 className="font-semibold tracking-tight text-foreground text-2xl sm:text-3xl md:text-[2.125rem] md:leading-[1.15] lg:text-[2.25rem]">
-              {article.title_fa}
+              {title}
             </h1>
 
             <ArticleShareBar
-              title={article.title_fa}
+              title={title}
               path={`/articles/${article.slug}`}
               publishedAt={article.published_at}
-              publishedAtLabel={faDate(article.published_at)}
+              publishedAtLabel={d(article.published_at)}
             />
 
             {article.cover_url ? (
               <div className="mt-6 overflow-hidden rounded-2xl bg-muted sm:mt-8 sm:rounded-3xl">
-                <img src={article.cover_url} alt={article.title_fa} className="w-full object-cover" />
+                <img src={article.cover_url} alt={title} className="w-full object-cover" />
               </div>
             ) : null}
 
-            {article.body_fa.includes("<") ? (
+            {body.includes("<") ? (
               <div
                 className="article-content mt-6 sm:mt-8"
                 // Body HTML is sanitized with a strict allowlist on the server before saving.
-                dangerouslySetInnerHTML={{ __html: article.body_fa }}
+                dangerouslySetInnerHTML={{ __html: body }}
               />
             ) : (
               <div className="article-content mt-6 sm:mt-8">
-                {article.body_fa.split("\n").map((paragraph, i) => (
+                {body.split("\n").map((paragraph, i) => (
                   <p key={i}>{paragraph}</p>
                 ))}
               </div>
@@ -99,7 +104,7 @@ function ArticlePage() {
               <div className="mb-5 flex w-full items-center gap-3 border-b border-border pb-4 sm:mb-6">
                 <span className="h-7 w-1 shrink-0 rounded-full bg-primary" aria-hidden="true" />
                 <h2 className="text-lg font-semibold leading-tight tracking-tight sm:text-xl">
-                  مطالب مرتبط
+                  {t("articles.related")}
                 </h2>
               </div>
               <ul className="space-y-5">
@@ -121,14 +126,14 @@ function ArticlePage() {
                       ) : null}
                       <div className="flex min-h-[5.5rem] flex-col bg-[#1c1c1e] px-4 pb-5 pt-4 transition-colors duration-300 group-hover:bg-[#242426] sm:min-h-[5.75rem] sm:px-5 sm:pb-6 sm:pt-5">
                         <p className="line-clamp-3 text-right text-[0.9375rem] font-medium leading-[1.45] tracking-[-0.015em] text-white sm:text-[0.96875rem]">
-                          {item.title_fa}
+                          {pickLocalized(item, "title", locale)}
                         </p>
                         <div className="mt-auto shrink-0 border-t border-white/10 pt-3.5 sm:pt-4">
                           <time
                             className="block w-full text-right text-[0.8125rem] leading-none text-white/50"
                             dateTime={item.published_at}
                           >
-                            {faDate(item.published_at)}
+                            {d(item.published_at)}
                           </time>
                         </div>
                       </div>

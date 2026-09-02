@@ -6,11 +6,7 @@ export const Route = createFileRoute("/_authenticated")({
   ssr: false,
   pendingMs: 0,
   beforeLoad: async () => {
-    const cached = hydrateUserCacheNow();
-    if (cached) {
-      void bootstrapAuth();
-      return { user: cached };
-    }
+    hydrateUserCacheNow();
     await bootstrapAuth();
     const snap = getAuthSnapshot();
     if (!snap.user) throw redirect({ to: "/auth" });

@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, 
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.core.rate_sources import normalize_rate_source
 from app.core.database import get_db
 from app.core.dependencies import require_admin, require_staff
 from app.models.user import User
@@ -111,8 +112,9 @@ def delete_transfer(
 def admin_currencies(
     _: Annotated[User, Depends(require_staff)],
     db: Session = Depends(get_db),
+    source: str = Query(default="sarai_shahzada"),
 ) -> list[CurrencyOut]:
-    rows = currencies_service.list_all_currencies(db)
+    rows = currencies_service.list_all_currencies(db, rate_source=normalize_rate_source(source))
     return [CurrencyOut.model_validate(r) for r in rows]
 
 

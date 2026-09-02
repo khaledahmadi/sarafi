@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useSession } from "@/hooks/use-session";
 import { createFeedback, listPublicFeedback } from "@/lib/public.functions";
 import { fieldErrorMap, feedbackSchema } from "@/lib/validation";
+import { useLocale } from "@/i18n";
 import { cn } from "@/lib/utils";
 
 const emptyForm = { body: "", rating: 0, guest_name: "", guest_email: "" };
@@ -16,6 +17,7 @@ const emptyForm = { body: "", rating: 0, guest_name: "", guest_email: "" };
 export function FeedbackView() {
   const { user } = useSession();
   const queryClient = useQueryClient();
+  const { t } = useLocale();
   const [form, setForm] = useState(emptyForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [page, setPage] = useState(1);
@@ -39,12 +41,12 @@ export function FeedbackView() {
       setForm(emptyForm);
       setErrors({});
       setPage(1);
-      toast.success("بازخورد شما ثبت شد");
+      toast.success(t("feedback.success"));
       void queryClient.invalidateQueries({ queryKey: ["public-feedback"] });
       void queryClient.invalidateQueries({ queryKey: ["staff-feedback"] });
       void queryClient.invalidateQueries({ queryKey: ["manage-stats"] });
     },
-    onError: () => toast.error("ثبت بازخورد ممکن نشد"),
+    onError: () => toast.error(t("feedback.submitFailed")),
   });
 
   const rows = list.data ?? [];
@@ -54,7 +56,7 @@ export function FeedbackView() {
     const parsed = feedbackSchema(Boolean(user)).safeParse(form);
     if (!parsed.success) {
       setErrors(fieldErrorMap(parsed.error));
-      toast.error("اطلاعات فرم را بررسی کنید");
+      toast.error(t("feedback.formInvalid"));
       return;
     }
     setErrors({});
@@ -65,16 +67,16 @@ export function FeedbackView() {
     <>
       <PageHero
         variant="soft"
-        eyebrow="بازخورد"
-        title="نظر شما برای ما مهم است"
-        description="تجربه خود از خدمات صرافی را ثبت کنید و بازخورد دیگران را ببینید."
+        eyebrow={t("feedback.eyebrow")}
+        title={t("feedback.heroTitle")}
+        description={t("feedback.heroDescription")}
       />
 
       <section className="mx-auto max-w-6xl space-y-8 px-4 py-10">
         <form onSubmit={onSubmit} className="space-y-4 p-5 card-elevated">
-          <h2 className="text-lg font-extrabold">ثبت بازخورد جدید</h2>
+          <h2 className="text-lg font-extrabold">{t("feedback.newFeedback")}</h2>
           <fieldset>
-            <legend className="mb-2 text-sm font-semibold">امتیاز</legend>
+            <legend className="mb-2 text-sm font-semibold">{t("feedback.rating")}</legend>
             <div className="flex items-center gap-1">
               {Array.from({ length: 5 }, (_, index) => {
                 const value = index + 1;
@@ -84,10 +86,10 @@ export function FeedbackView() {
                     type="button"
                     onClick={() => {
                       setForm((current) => ({ ...current, rating: value }));
-                      if (errors.rating) setErrors((current) => ({ ...current, rating: "" }));
+                      if (errors["rating"]) setErrors((current) => ({ ...current, rating: "" }));
                     }}
                     className="grid size-11 place-items-center rounded-lg"
-                    aria-label={`${value} ستاره`}
+                    aria-label={t("feedback.starsAria", { count: value })}
                     aria-pressed={form.rating === value}
                   >
                     <Star
@@ -100,52 +102,52 @@ export function FeedbackView() {
                 );
               })}
             </div>
-            {errors.rating ? (
+            {errors["rating"] ? (
               <p className="mt-1 text-sm text-destructive" role="alert">
-                {errors.rating}
+                {errors["rating"]}
               </p>
             ) : null}
           </fieldset>
           {user ? null : (
             <div className="grid gap-4 sm:grid-cols-2">
               <TextField
-                label="نام"
+                label={t("feedback.name")}
                 value={form.guest_name}
-                error={errors.guest_name}
+                error={errors["guest_name"]}
                 onChange={(event) => {
                   setForm((current) => ({ ...current, guest_name: event.target.value }));
-                  if (errors.guest_name) setErrors((current) => ({ ...current, guest_name: "" }));
+                  if (errors["guest_name"]) setErrors((current) => ({ ...current, guest_name: "" }));
                 }}
               />
               <TextField
-                label="ایمیل"
+                label={t("feedback.email")}
                 type="email"
                 dir="ltr"
                 value={form.guest_email}
-                error={errors.guest_email}
+                error={errors["guest_email"]}
                 onChange={(event) => {
                   setForm((current) => ({ ...current, guest_email: event.target.value }));
-                  if (errors.guest_email) setErrors((current) => ({ ...current, guest_email: "" }));
+                  if (errors["guest_email"]) setErrors((current) => ({ ...current, guest_email: "" }));
                 }}
               />
             </div>
           )}
           <TextAreaField
-            label="متن بازخورد"
+            label={t("feedback.body")}
             value={form.body}
-            error={errors.body}
+            error={errors["body"]}
             onChange={(event) => {
               setForm((current) => ({ ...current, body: event.target.value }));
-              if (errors.body) setErrors((current) => ({ ...current, body: "" }));
+              if (errors["body"]) setErrors((current) => ({ ...current, body: "" }));
             }}
           />
           <Button type="submit" className="min-h-11" disabled={submit.isPending}>
-            {submit.isPending ? "در حال ثبت…" : "ارسال بازخورد"}
+            {submit.isPending ? t("feedback.submitting") : t("feedback.send")}
           </Button>
         </form>
 
         <section className="space-y-4">
-          <h2 className="text-lg font-extrabold">همه بازخوردها</h2>
+          <h2 className="text-lg font-extrabold">{t("feedback.allFeedback")}</h2>
           <FeedbackList
             rows={rows}
             page={page}

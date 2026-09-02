@@ -1,4 +1,4 @@
-import { queryOptions } from "@tanstack/react-query";
+import { queryOptions, type QueryClient } from "@tanstack/react-query";
 import {
   getArticle,
   listArticleComments,
@@ -10,12 +10,18 @@ import {
   listServices,
   listSettings,
 } from "./public.functions";
+import { DEFAULT_RATE_SOURCE, RATE_SOURCES, type RateSourceId } from "./rate-sources";
 
-export const ratesQuery = queryOptions({
-  queryKey: ["rates"],
-  queryFn: () => listRates(),
-  staleTime: 60_000,
-});
+export const ratesQuery = (source: RateSourceId = DEFAULT_RATE_SOURCE) =>
+  queryOptions({
+    queryKey: ["rates", source],
+    queryFn: () => listRates(source),
+    staleTime: 30_000,
+  });
+
+export function prefetchRateSources(queryClient: QueryClient) {
+  return Promise.all(RATE_SOURCES.map((market) => queryClient.ensureQueryData(ratesQuery(market.id))));
+}
 
 export const servicesQuery = queryOptions({
   queryKey: ["services"],

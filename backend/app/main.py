@@ -1,3 +1,6 @@
+import asyncio
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -5,9 +8,25 @@ from fastapi.staticfiles import StaticFiles
 
 from app.api.v1 import api_router
 from app.core.config import settings
+from app.services.rate_sync import rate_sync_loop
 from app.services.uploads import upload_dir
 
-app = FastAPI(title=f"{settings.APP_NAME} API", debug=settings.DEBUG)
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    sync_task: asyncio.Task | None = None
+    if settings.RATE_SYNC_ENABLED:
+        sync_task = asyncio.create_task(rate_sync_loop())
+    yield
+    if sync_task is not None:
+        sync_task.cancel()
+        try:
+            await sync_task
+        except asyncio.CancelledError:
+            pass
+
+
+app = FastAPI(title=f"{settings.APP_NAME} API", debug=settings.DEBUG, lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

@@ -16,6 +16,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { ConfirmDeleteDialog } from "@/components/site/ConfirmDeleteDialog";
+import { useLocale } from "@/i18n";
 import { useRoles } from "@/hooks/use-session";
 import { AppSelect, SearchableSelectField, TextAreaField, TextField } from "@/components/site/Field";
 import { cityOptionsForCountry } from "@/lib/cities";
@@ -23,12 +24,12 @@ import { countryNameOptions } from "@/lib/country-flags";
 import { fieldClass, labelClass } from "@/lib/forms";
 import { deleteBranch, listAdminBranches, saveBranch } from "@/lib/portal.functions";
 import { branchSchema, fieldErrorMap } from "@/lib/validation";
-import { faNum, site } from "@/lib/site";
+import { site } from "@/lib/site";
 
 export const Route = createFileRoute("/_authenticated/dashboard/branches")({
   head: () => ({
     meta: [
-      { title: `مدیریت نمایندگی‌ها | ${site.name}` },
+      { title: `Branches | ${site.name}` },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -63,14 +64,15 @@ const emptyForm: FormState = {
 
 const pageSizes = [5, 10, 25, 50, 100];
 
-const sortLabels: Record<SortKey, string> = {
-  name_fa: "نمایندگی",
-  city_fa: "شهر",
-  country_fa: "کشور",
-  phone: "تماس",
-};
-
 function BranchesManagePage() {
+  const { t, n, d } = useLocale();
+  const sortLabels: Record<SortKey, string> = {
+    name_fa: t("admin.sortBranch"),
+    city_fa: t("admin.sortCity"),
+    country_fa: t("admin.sortCountry"),
+    phone: t("admin.contactShort"),
+  };
+
   const { isAdmin } = useRoles();
   const queryClient = useQueryClient();
   const [form, setForm] = useState<FormState>(emptyForm);
@@ -112,7 +114,7 @@ function BranchesManagePage() {
       const parsed = branchSchema.safeParse(payload);
       if (!parsed.success) {
         setErrors(fieldErrorMap(parsed.error));
-        throw new Error("اطلاعات وارد شده کامل نیست");
+        throw new Error(t("admin.formIncomplete"));
       }
       setErrors({});
       return saveBranch({ data: payload });
@@ -123,7 +125,7 @@ function BranchesManagePage() {
         toast.error(result.message);
         return;
       }
-      toast.success(form.id ? "نمایندگی ویرایش شد" : "نمایندگی جدید ثبت شد");
+      toast.success(form.id ? t("admin.branchesSaved") : t("admin.branchesCreated"));
       setForm(emptyForm);
       invalidate();
     },
@@ -137,11 +139,11 @@ function BranchesManagePage() {
         toast.error(result.message);
         return;
       }
-      toast.success("نمایندگی حذف شد");
+      toast.success(t("admin.branchesDeleted"));
       setForm((prev) => (prev.id ? emptyForm : prev));
       invalidate();
     },
-    onError: () => toast.error("حذف نمایندگی ممکن نشد"),
+    onError: () => toast.error(t("admin.branchesDeleteFailed")),
   });
 
   const counts = useMemo(() => {
@@ -157,7 +159,7 @@ function BranchesManagePage() {
     const countries = [...new Set((branches.data ?? []).map((row) => row.country_fa.trim()).filter(Boolean))];
     countries.sort((a, b) => a.localeCompare(b, "fa"));
     return [
-      { value: "all", label: "همه کشورها" },
+      { value: "all", label: t("admin.allCountries") },
       ...countries.map((country) => ({ value: country, label: country })),
     ];
   }, [branches.data]);
@@ -225,10 +227,10 @@ function BranchesManagePage() {
 
   function exportCsv() {
     if (filtered.length === 0) {
-      toast.error("داده‌ای برای خروجی وجود ندارد");
+      toast.error(t("admin.noDataExport"));
       return;
     }
-    const header = ["نام", "کشور", "شهر", "آدرس", "تلفن", "واتساپ", "نقشه"];
+    const header = [t("admin.branchNameLabel"), t("admin.branchCityLabel"), t("admin.branchCountryLabel"), t("admin.phoneShort"), t("admin.whatsappShort"), t("admin.addressShort")];
     const cell = (value: string) => `"${value.replace(/"/g, '""')}"`;
     const lines = [
       header.map(cell).join(","),
@@ -253,34 +255,31 @@ function BranchesManagePage() {
     link.download = `sarafi-branches-${new Date().toISOString().slice(0, 10)}.csv`;
     link.click();
     URL.revokeObjectURL(url);
-    toast.success(`خروجی CSV برای ${faNum(filtered.length, 0)} نمایندگی آماده شد`);
+    toast.success(t("admin.branchesCsvReady", { count: n(filtered.length, 0) }));
   }
 
   if (!isAdmin) {
     return (
       <div className="p-6 card-elevated">
-        <h1 className="text-lg font-bold">دسترسی محدود</h1>
+        <h1 className="text-lg font-bold">{t("admin.accessDeniedTitle")}</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          مدیریت نمایندگی‌ها تنها برای مدیر سیستم مجاز است.
+          {t("admin.branchesAccess")}
         </p>
       </div>
     );
   }
 
   const stats = [
-    { label: "کل نمایندگی‌ها", value: counts.total, icon: Building2 },
-    { label: "شهرها", value: counts.cities, icon: MapPin },
-    { label: "کشورها", value: counts.countries, icon: Globe },
+    { label: t("admin.branchesTotal"), value: counts.total, icon: Building2 },
+    { label: t("admin.branchesCities"), value: counts.cities, icon: MapPin },
+    { label: t("admin.branchesCountries"), value: counts.countries, icon: Globe },
   ];
 
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-2xl font-extrabold">مدیریت نمایندگی‌ها</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          جست‌وجو کنید، فیلتر بزنید و نمایندگی‌ها را اضافه، ویرایش یا حذف کنید؛ تغییرات در صفحه
-          نمایندگی‌ها نمایش داده می‌شود.
-        </p>
+        <h1 className="text-2xl font-extrabold">{t("admin.branchesTitle")}</h1>
+        <p className="mt-2 text-sm text-muted-foreground">{t("admin.branchesSubtitle")}</p>
       </header>
 
       <div className="grid gap-3 sm:grid-cols-3">
@@ -291,7 +290,7 @@ function BranchesManagePage() {
             </span>
             <div>
               <p className="text-xs text-muted-foreground">{stat.label}</p>
-              <p className="text-lg font-extrabold">{faNum(stat.value, 0)}</p>
+              <p className="text-lg font-extrabold">{n(stat.value, 0)}</p>
             </div>
           </div>
         ))}
@@ -302,7 +301,7 @@ function BranchesManagePage() {
           <div className="grid gap-4 p-5 card-elevated lg:grid-cols-[1fr_13rem_11rem_auto] lg:items-end">
             <div>
               <label className={labelClass} htmlFor="branch-search">
-                جست‌وجوی نمایندگی
+                {t("admin.branchesSearch")}
               </label>
               <div className="relative mt-2">
                 <Search className="pointer-events-none absolute end-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -310,7 +309,7 @@ function BranchesManagePage() {
                   id="branch-search"
                   dir="rtl"
                   className={`${fieldClass} pe-10`}
-                  placeholder="نام، شهر، کشور، آدرس یا شماره تماس"
+                  placeholder={t("admin.branchesSearchPh")}
                   value={search}
                   onChange={(e) => {
                     setSearch(e.target.value);
@@ -321,7 +320,7 @@ function BranchesManagePage() {
             </div>
             <div>
               <label className={labelClass} htmlFor="branch-country-filter">
-                فیلتر کشور
+                {t("admin.countryFilter")}
               </label>
               <div className="mt-2">
                 <AppSelect
@@ -337,7 +336,7 @@ function BranchesManagePage() {
             </div>
             <div>
               <label className={labelClass} htmlFor="branch-page-size">
-                تعداد در هر صفحه
+                {t("admin.pageSize")}
               </label>
               <div className="mt-2">
                 <AppSelect
@@ -345,7 +344,7 @@ function BranchesManagePage() {
                   value={String(pageSize)}
                   options={pageSizes.map((size) => ({
                     value: String(size),
-                    label: `${faNum(size, 0)} ردیف`,
+                    label: `${t("admin.rows", { count: n(size, 0) })}`,
                   }))}
                   onValueChange={(value) => {
                     setPageSize(Number(value));
@@ -359,13 +358,12 @@ function BranchesManagePage() {
               onClick={exportCsv}
               className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-bold text-primary-foreground"
             >
-              <Download className="size-4" /> خروجی CSV
+              <Download className="size-4" /> {t("admin.exportCsv")}
             </button>
           </div>
 
           <p className="text-xs text-muted-foreground">
-            نمایش {faNum(paginated.length, 0)} نمایندگی از {faNum(filtered.length, 0)} نتیجه — صفحه{" "}
-            {faNum(currentPage, 0)} از {faNum(totalPages, 0)}
+            {t("admin.branchesShowing", { shown: n(paginated.length, 0), total: n(filtered.length, 0), page: n(currentPage, 0), pages: n(totalPages, 0) })}
           </p>
 
           <div className="overflow-x-auto card-elevated">
@@ -378,7 +376,7 @@ function BranchesManagePage() {
                         type="button"
                         onClick={() => toggleSort(key)}
                         className="inline-flex items-center gap-1 font-semibold hover:text-primary"
-                        aria-label={`مرتب‌سازی بر اساس ${sortLabels[key]}`}
+                        aria-label={t("admin.sortBy", { label: sortLabels[key] })}
                       >
                         {sortLabels[key]}
                         <ArrowUpDown
@@ -386,20 +384,20 @@ function BranchesManagePage() {
                         />
                         {sortKey === key && (
                           <span className="text-[10px] text-muted-foreground">
-                            {sortDir === "asc" ? "صعودی" : "نزولی"}
+                            {sortDir === "asc" ? t("admin.asc") : t("admin.desc")}
                           </span>
                         )}
                       </button>
                     </th>
                   ))}
-                  <th className="px-4 py-3 font-semibold">عملیات</th>
+                  <th className="px-4 py-3 font-semibold">{t("common.actions")}</th>
                 </tr>
               </thead>
               <tbody>
                 {!branches.isLoading && filtered.length === 0 && (
                   <tr>
                     <td className="px-4 py-10 text-center text-muted-foreground" colSpan={columnCount}>
-                      نمایندگی‌ای با این مشخصات یافت نشد.
+                      {t("admin.branchesEmpty")}
                     </td>
                   </tr>
                 )}
@@ -414,7 +412,7 @@ function BranchesManagePage() {
                         <span className="font-semibold">{branch.name_fa}</span>
                         {form.id === branch.id && (
                           <span className="ms-2 rounded-full bg-accent/20 px-2 py-0.5 text-[10px] font-bold text-accent-foreground">
-                            در حال ویرایش
+                            {t("admin.editing")}
                           </span>
                         )}
                         {branch.address_fa && (
@@ -435,7 +433,7 @@ function BranchesManagePage() {
                             onClick={() => startEdit(branch)}
                             className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold"
                           >
-                            <Pencil className="size-3.5" /> ویرایش
+                            <Pencil className="size-3.5" /> {t("common.edit")}
                           </button>
                           <button
                             type="button"
@@ -443,7 +441,7 @@ function BranchesManagePage() {
                             onClick={() => setPendingDelete(branch)}
                             className="inline-flex items-center gap-1.5 rounded-lg border border-destructive/40 px-3 py-1.5 text-xs font-semibold text-destructive disabled:opacity-60"
                           >
-                            <Trash2 className="size-3.5" /> حذف
+                            <Trash2 className="size-3.5" /> {t("common.delete")}
                           </button>
                         </div>
                       </td>
@@ -456,7 +454,7 @@ function BranchesManagePage() {
 
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-xs text-muted-foreground">
-              صفحه {faNum(currentPage, 0)} از {faNum(totalPages, 0)}
+              {t("admin.pageOf", { page: n(currentPage, 0), pages: n(totalPages, 0) })}
             </p>
             <div className="flex items-center gap-2">
               <button
@@ -465,7 +463,7 @@ function BranchesManagePage() {
                 disabled={currentPage <= 1}
                 className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-2 text-xs font-semibold disabled:opacity-40"
               >
-                <ChevronRight className="size-3.5" /> قبلی
+                <ChevronRight className="size-3.5" /> {t("common.previous")}
               </button>
               <button
                 type="button"
@@ -473,7 +471,7 @@ function BranchesManagePage() {
                 disabled={currentPage >= totalPages}
                 className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-2 text-xs font-semibold disabled:opacity-40"
               >
-                بعدی <ChevronLeft className="size-3.5" />
+                {t("common.next")} <ChevronLeft className="size-3.5" />
               </button>
             </div>
           </div>
@@ -486,23 +484,23 @@ function BranchesManagePage() {
           }}
           className="h-fit space-y-4 p-5 card-elevated"
         >
-          <h2 className="text-base font-bold">{form.id ? "ویرایش نمایندگی" : "افزودن نمایندگی"}</h2>
+          <h2 className="text-base font-bold">{form.id ? t("admin.branchesEdit") : t("admin.branchesAdd")}</h2>
           <TextField
-            label="نام نمایندگی"
+            label={t("admin.branchNameLabel")}
             value={form.name_fa}
             error={errors["name_fa"]}
             onChange={(e) => setForm((p) => ({ ...p, name_fa: e.target.value }))}
-            placeholder="دفتر مرکزی کابل"
+            placeholder=""
           />
           <div className="grid grid-cols-2 gap-3">
             <SearchableSelectField
-              label="کشور"
-              hint="کشور را جست‌وجو و انتخاب کنید"
+              label={t("admin.branchCountryLabel")}
+              hint={t("admin.countrySearchHint")}
               value={form.country_fa}
               error={errors["country_fa"]}
               options={formCountryOptions}
-              placeholder="انتخاب کشور"
-              searchPlaceholder="جست‌وجوی کشور…"
+              placeholder={t("admin.selectCountry")}
+              searchPlaceholder={t("admin.searchCountryPh")}
               onValueChange={(country_fa) => {
                 setErrors((p) => ({ ...p, country_fa: "", city_fa: "" }));
                 setForm((p) => ({
@@ -513,13 +511,13 @@ function BranchesManagePage() {
               }}
             />
             <SearchableSelectField
-              label="شهر"
-              hint={form.country_fa ? "شهر را جست‌وجو و انتخاب کنید" : "ابتدا کشور را انتخاب کنید"}
+              label={t("admin.branchCityLabel")}
+              hint={form.country_fa ? t("admin.citySearchHint") : t("admin.selectCountryFirst")}
               value={form.city_fa}
               error={errors["city_fa"]}
               options={formCityOptions}
-              placeholder={form.country_fa ? "انتخاب شهر" : "ابتدا کشور را انتخاب کنید"}
-              searchPlaceholder="جست‌وجوی شهر…"
+              placeholder={form.country_fa ? t("admin.selectCity") : t("admin.selectCountryFirst")}
+              searchPlaceholder={t("admin.searchCityPh")}
               disabled={!form.country_fa}
               onValueChange={(city_fa) => {
                 setErrors((p) => ({ ...p, city_fa: "" }));
@@ -528,14 +526,14 @@ function BranchesManagePage() {
             />
           </div>
           <TextAreaField
-            label="آدرس (اختیاری)"
+            label={t("admin.branchAddressOpt")}
             value={form.address_fa}
             error={errors["address_fa"]}
             onChange={(e) => setForm((p) => ({ ...p, address_fa: e.target.value }))}
           />
           <div className="grid grid-cols-2 gap-3">
             <TextField
-              label="شماره تماس (اختیاری)"
+              label={t("admin.branchPhoneOpt")}
               dir="ltr"
               className="text-left"
               value={form.phone}
@@ -543,7 +541,7 @@ function BranchesManagePage() {
               onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
             />
             <TextField
-              label="واتساپ (اختیاری)"
+              label={t("admin.branchWhatsappOpt")}
               dir="ltr"
               className="text-left"
               value={form.whatsapp}
@@ -552,7 +550,7 @@ function BranchesManagePage() {
             />
           </div>
           <TextField
-            label="لینک نقشه (اختیاری)"
+            label={t("admin.branchMapOpt")}
             dir="ltr"
             className="text-left"
             value={form.map_url}
@@ -567,7 +565,7 @@ function BranchesManagePage() {
               className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground disabled:opacity-60"
             >
               <Plus className="size-4" />
-              {save.isPending ? "در حال ذخیره…" : form.id ? "ذخیره تغییرات" : "ثبت نمایندگی"}
+              {save.isPending ? t("admin.saving") : form.id ? t("admin.saveChanges") : t("admin.registerBranch")}
             </button>
             {form.id && (
               <button
@@ -578,7 +576,7 @@ function BranchesManagePage() {
                 }}
                 className="rounded-lg border border-border px-4 py-2.5 text-sm font-semibold"
               >
-                لغو ویرایش
+                {t("admin.cancelEdit")}
               </button>
             )}
           </div>
@@ -587,9 +585,9 @@ function BranchesManagePage() {
 
       <ConfirmDeleteDialog
         open={Boolean(pendingDelete)}
-        title="حذف نمایندگی"
+        title={t("admin.branchesDeleteTitle")}
         itemName={pendingDelete?.name_fa}
-        description="این نمایندگی از صفحه عمومی سایت برداشته می‌شود و دیگر قابل بازیابی نیست."
+        description={t("admin.branchesDeleteDesc")}
         pending={remove.isPending}
         onOpenChange={(open) => !open && setPendingDelete(null)}
         onConfirm={() => {

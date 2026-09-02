@@ -7,28 +7,24 @@ import { TextAreaField, TextField } from "@/components/site/Field";
 import { validateContactMessage } from "@/lib/contact.functions";
 import { contactSchema, fieldErrorMap } from "@/lib/validation";
 import { settingsQuery } from "@/lib/queries";
-import { site } from "@/lib/site";
 import { useSiteSettings } from "@/hooks/use-settings";
-
-const title = `تماس با ${site.name}`;
-const description =
-  "شماره تماس، واتس‌اپ، ایمیل و نشانی دفتر مرکزی برای دریافت نرخ حواله و مشاوره.";
+import { useLocale } from "@/i18n";
+import { pageMeta, resolvePageLocale } from "@/i18n/meta";
 
 export const Route = createFileRoute("/contact")({
-  head: () => ({
-    meta: [
-      { title },
-      { name: "description", content: description },
-      { property: "og:title", content: title },
-      { property: "og:description", content: description },
-    ],
-  }),
-  loader: ({ context }) => context.queryClient.ensureQueryData(settingsQuery),
+  loader: async ({ context }) => {
+    const locale = await resolvePageLocale();
+    await context.queryClient.ensureQueryData(settingsQuery);
+    return { locale };
+  },
+  head: ({ loaderData }) =>
+    pageMeta(loaderData?.locale ?? "fa", "meta.contactTitle", "meta.contactDescription"),
   component: ContactPage,
 });
 
 function ContactPage() {
   const { get } = useSiteSettings();
+  const { t, dir } = useLocale();
   const phone = get("contact.phone");
   const whatsapp = get("contact.whatsapp").replace(/[^\d]/g, "");
   const email = get("contact.email");
@@ -48,7 +44,7 @@ function ContactPage() {
     const local = contactSchema.safeParse(form);
     if (!local.success) {
       setErrors(fieldErrorMap(local.error));
-      toast.error("اطلاعات فرم را بررسی کنید");
+      toast.error(t("contact.formInvalid"));
       return;
     }
     setBusy(true);
@@ -65,35 +61,38 @@ function ContactPage() {
         "_blank",
         "noopener",
       );
-      toast.success("پیام شما در واتس‌اپ آماده ارسال است");
+      toast.success(t("contact.whatsappReady"));
     } finally {
       setBusy(false);
     }
   }
 
+  const cards = [
+    { icon: Phone, label: t("common.phone"), value: phone, href: `tel:${phone}`, valueDir: "ltr" as const },
+    {
+      icon: MessageCircle,
+      label: t("contact.whatsapp"),
+      value: phone,
+      href: `https://wa.me/${whatsapp}`,
+      valueDir: "ltr" as const,
+    },
+    { icon: Mail, label: t("common.email"), value: email, href: `mailto:${email}`, valueDir: "ltr" as const },
+    { icon: MapPin, label: t("common.address"), value: address, valueDir: dir },
+    { icon: Clock, label: t("common.hours"), value: hours, valueDir: dir },
+  ];
+
   return (
     <>
       <PageHero
         variant="deep"
-        eyebrow="تماس"
-        title="با ما در ارتباط باشید"
+        eyebrow={t("contact.eyebrow")}
+        title={t("contact.heroTitle")}
         description={get("contact.hero_description")}
       />
 
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-14 lg:grid-cols-[1fr_1.2fr]">
         <div className="space-y-4">
-          {[
-            { icon: Phone, label: "تلفن", value: phone, href: `tel:${phone}` },
-            {
-              icon: MessageCircle,
-              label: "واتس‌اپ",
-              value: phone,
-              href: `https://wa.me/${whatsapp}`,
-            },
-            { icon: Mail, label: "ایمیل", value: email, href: `mailto:${email}` },
-            { icon: MapPin, label: "نشانی", value: address },
-            { icon: Clock, label: "ساعات کاری", value: hours },
-          ].map((item) => (
+          {cards.map((item) => (
             <div key={item.label} className="flex items-start gap-4 p-5 card-elevated">
               <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary text-accent">
                 <item.icon className="size-5" />
@@ -101,11 +100,7 @@ function ContactPage() {
               <div>
                 <p className="text-xs text-muted-foreground">{item.label}</p>
                 {item.href ? (
-                  <a
-                    href={item.href}
-                    className="text-sm font-semibold"
-                    dir={item.label === "نشانی" || item.label === "ساعات کاری" ? "rtl" : "ltr"}
-                  >
+                  <a href={item.href} className="text-sm font-semibold" dir={item.valueDir}>
                     {item.value}
                   </a>
                 ) : (
@@ -117,20 +112,18 @@ function ContactPage() {
         </div>
 
         <form onSubmit={submit} className="p-7 card-elevated">
-          <h2 className="text-lg font-bold">ارسال پیام سریع</h2>
-          <p className="mt-2 text-sm text-muted-foreground">
-            پیام شما از طریق واتس‌اپ به کارشناسان ما ارسال می‌شود.
-          </p>
+          <h2 className="text-lg font-bold">{t("contact.quickMessage")}</h2>
+          <p className="mt-2 text-sm text-muted-foreground">{t("contact.quickMessageHint")}</p>
           <div className="mt-6 space-y-4">
             <TextField
-              label="نام و تخلص"
+              label={t("contact.fullName")}
               maxLength={100}
               value={form.name}
               error={errors["name"]}
               onChange={(e) => update("name", e.target.value)}
             />
             <TextField
-              label="شماره تماس"
+              label={t("contact.phoneLabel")}
               inputMode="tel"
               maxLength={24}
               value={form.phone}
@@ -138,7 +131,7 @@ function ContactPage() {
               onChange={(e) => update("phone", e.target.value)}
             />
             <TextAreaField
-              label="پیام"
+              label={t("contact.message")}
               className="min-h-32 resize-y"
               maxLength={1000}
               value={form.message}
@@ -150,7 +143,7 @@ function ContactPage() {
               disabled={busy}
               className="w-full rounded-xl bg-primary px-5 py-3 text-sm font-bold text-primary-foreground disabled:opacity-60"
             >
-              {busy ? "در حال بررسی…" : "ارسال پیام"}
+              {busy ? t("contact.checking") : t("contact.send")}
             </button>
           </div>
         </form>

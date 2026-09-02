@@ -13,6 +13,7 @@ export const site = {
   baseCurrencyFa: "افغانی",
 } as const;
 
+/** @deprecated Prefer statusLabel(locale, status) via i18n for multi-locale UI. */
 export const statusLabels: Record<string, string> = {
   pending: "در انتظار بررسی",
   in_review: "در حال بررسی",
@@ -22,12 +23,23 @@ export const statusLabels: Record<string, string> = {
   cancelled: "لغو شده",
 };
 
+export const STATUS_KEYS = [
+  "pending",
+  "in_review",
+  "processing",
+  "completed",
+  "rejected",
+  "cancelled",
+] as const;
+
+export type TransferStatusKey = (typeof STATUS_KEYS)[number];
+
 const FA_DIGITS = "۰۱۲۳۴۵۶۷۸۹";
 
 export function faNum(value: number | string, digits = 2) {
   const n = typeof value === "string" ? Number(value) : value;
   if (Number.isNaN(n)) return "—";
-  const [intPart, fracPart = ""] = n.toFixed(digits).split(".");
+  const [intPart = "0", fracPart = ""] = n.toFixed(digits).split(".");
   const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, "٬");
   const raw = digits > 0 ? `${grouped}٫${fracPart}` : grouped;
   return raw.replace(/\d/g, (digit) => FA_DIGITS[Number(digit)] ?? digit);

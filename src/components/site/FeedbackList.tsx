@@ -1,22 +1,24 @@
 import { ChevronLeft, ChevronRight, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useLocale } from "@/i18n";
 import { paginateFeedbacks, PUBLIC_FEEDBACK_PAGE_SIZE, type FeedbackRow } from "@/lib/feedback-table";
-import { faDate, faNum } from "@/lib/site";
 
 function FeedbackCard({ row }: { row: FeedbackRow }) {
+  const { t, n, d } = useLocale();
+
   return (
     <article className="flex h-full flex-col p-5 card-elevated">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="font-semibold">{row.author}</p>
           <time className="mt-1 block text-xs text-muted-foreground" dateTime={row.created_at}>
-            {faDate(row.created_at)}
+            {d(row.created_at)}
           </time>
         </div>
         <span
           className="inline-flex items-center gap-0.5"
-          aria-label={`${faNum(row.rating, 0)} از ۵`}
+          aria-label={t("feedback.ofFive", { rating: n(row.rating, 0) })}
         >
           {Array.from({ length: 5 }, (_, index) => (
             <Star
@@ -65,6 +67,7 @@ export function FeedbackList({
   onPageChange: (page: number) => void;
   loading: boolean;
 }) {
+  const { t, n } = useLocale();
   const { items, currentPage, totalPages, total } = paginateFeedbacks(rows, page);
 
   if (loading) {
@@ -74,7 +77,7 @@ export function FeedbackList({
   if (total === 0) {
     return (
       <p className="rounded-2xl px-5 py-8 text-center text-sm text-muted-foreground card-elevated">
-        هنوز بازخوردی ثبت نشده است.
+        {t("feedback.emptyList")}
       </p>
     );
   }
@@ -90,7 +93,7 @@ export function FeedbackList({
       {totalPages > 1 ? (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-muted-foreground">
-            صفحه {faNum(currentPage, 0)} از {faNum(totalPages, 0)}
+            {t("common.pageOf", { page: n(currentPage, 0), pages: n(totalPages, 0) })}
           </p>
           <div className="flex items-center gap-2">
             <Button
@@ -101,7 +104,7 @@ export function FeedbackList({
               onClick={() => onPageChange(currentPage - 1)}
             >
               <ChevronRight className="size-4" />
-              قبلی
+              {t("common.previous")}
             </Button>
             <Button
               type="button"
@@ -110,7 +113,7 @@ export function FeedbackList({
               disabled={currentPage >= totalPages}
               onClick={() => onPageChange(currentPage + 1)}
             >
-              بعدی
+              {t("common.next")}
               <ChevronLeft className="size-4" />
             </Button>
           </div>

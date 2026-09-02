@@ -12,9 +12,10 @@ export type FeedbackRow = {
   created_at: string;
 };
 
+/** @deprecated Prefer t("admin.feedbackPending") / t("admin.reviewed"). */
 export const feedbackStatusLabels: Record<FeedbackStatus, string> = {
-  pending: "در انتظار بررسی",
-  reviewed: "بررسی‌شده",
+  pending: "pending",
+  reviewed: "reviewed",
 };
 
 export function isFeedbackStatus(value: string): value is FeedbackStatus {

@@ -1,19 +1,24 @@
 import { apiAction, apiRequest } from "@/lib/api/client";
+import type { RateSourceId } from "@/lib/rate-sources";
+import { DEFAULT_RATE_SOURCE } from "@/lib/rate-sources";
 import type { ActionResult } from "@/lib/validation";
 
 type DataArg<T> = { data: T };
 
-export async function listRates() {
+export async function listRates(source: RateSourceId = DEFAULT_RATE_SOURCE) {
   const rows = await apiRequest<
     Array<{
+      rate_source: string;
       code: string;
       name_fa: string;
+      name_en?: string | null;
+      name_ps?: string | null;
       flag: string | null;
       buy_rate: number | string;
       sell_rate: number | string;
       updated_at: string;
     }>
-  >("/api/v1/rates");
+  >(`/api/v1/rates?source=${encodeURIComponent(source)}`);
   return rows.map((row) => ({
     ...row,
     buy_rate: Number(row.buy_rate),
@@ -24,7 +29,11 @@ export async function listRates() {
 export type PublicFaq = {
   id: string;
   question: string;
+  question_en?: string | null;
+  question_ps?: string | null;
   answer: string;
+  answer_en?: string | null;
+  answer_ps?: string | null;
   keywords: string | null;
 };
 
@@ -34,7 +43,16 @@ export async function listFaqs() {
 
 export async function listServices() {
   return apiRequest<
-    Array<{ slug: string; title_fa: string; summary_fa: string; icon: string }>
+    Array<{
+      slug: string;
+      title_fa: string;
+      title_en?: string | null;
+      title_ps?: string | null;
+      summary_fa: string;
+      summary_en?: string | null;
+      summary_ps?: string | null;
+      icon: string;
+    }>
   >("/api/v1/services");
 }
 
@@ -43,9 +61,17 @@ export async function listBranches() {
     Array<{
       id: string;
       name_fa: string;
+      name_en?: string | null;
+      name_ps?: string | null;
       city_fa: string;
+      city_en?: string | null;
+      city_ps?: string | null;
       country_fa: string;
+      country_en?: string | null;
+      country_ps?: string | null;
       address_fa: string | null;
+      address_en?: string | null;
+      address_ps?: string | null;
       phone: string | null;
       whatsapp: string | null;
       map_url: string | null;
@@ -58,7 +84,11 @@ export async function listArticles() {
     Array<{
       slug: string;
       title_fa: string;
+      title_en?: string | null;
+      title_ps?: string | null;
       excerpt_fa: string;
+      excerpt_en?: string | null;
+      excerpt_ps?: string | null;
       cover_url: string | null;
       published_at: string;
     }>
@@ -70,8 +100,14 @@ export async function getArticle({ data }: DataArg<{ slug: string }>) {
     return await apiRequest<{
       slug: string;
       title_fa: string;
+      title_en?: string | null;
+      title_ps?: string | null;
       excerpt_fa: string;
+      excerpt_en?: string | null;
+      excerpt_ps?: string | null;
       body_fa: string;
+      body_en?: string | null;
+      body_ps?: string | null;
       cover_url: string | null;
       published_at: string;
     }>(`/api/v1/articles/${encodeURIComponent(data.slug)}`);
@@ -87,6 +123,8 @@ export async function listSettings() {
       group_key: string;
       label_fa: string;
       value: string;
+      value_en?: string | null;
+      value_ps?: string | null;
       input_kind: string;
       hint_fa: string | null;
       sort_order: number;

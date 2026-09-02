@@ -1,6 +1,7 @@
 import { Link2, Printer } from "lucide-react";
 import { toast } from "sonner";
 import { useHasMounted } from "@/hooks/use-has-mounted";
+import { useLocale } from "@/i18n";
 
 type ArticleShareBarProps = {
   title: string;
@@ -20,6 +21,7 @@ export function ArticleShareBar({
   publishedAt,
 }: ArticleShareBarProps) {
   const mounted = useHasMounted();
+  const { t } = useLocale();
   const origin = mounted && typeof window !== "undefined" ? window.location.origin : "";
   const url = shareHref(origin, path);
   const encodedUrl = encodeURIComponent(url);
@@ -28,9 +30,9 @@ export function ArticleShareBar({
   async function copyLink() {
     try {
       await navigator.clipboard.writeText(url);
-      toast.success("پیوند مقاله کپی شد");
+      toast.success(t("articles.linkCopied"));
     } catch {
-      toast.error("کپی پیوند ممکن نشد");
+      toast.error(t("articles.copyFailed"));
     }
   }
 
@@ -41,19 +43,19 @@ export function ArticleShareBar({
           <button
             type="button"
             className="flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground"
-            title="چاپ"
+            title={t("articles.print")}
             onClick={() => window.print()}
           >
-            <span className="sr-only">چاپ</span>
+            <span className="sr-only">{t("articles.print")}</span>
             <Printer className="h-5 w-5" aria-hidden="true" />
           </button>
           <button
             type="button"
             className="flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground"
-            title="کپی پیوند"
+            title={t("articles.copyLink")}
             onClick={() => void copyLink()}
           >
-            <span className="sr-only">کپی پیوند</span>
+            <span className="sr-only">{t("articles.copyLink")}</span>
             <Link2 className="h-5 w-5" aria-hidden="true" />
           </button>
           <a
@@ -61,9 +63,9 @@ export function ArticleShareBar({
             target="_blank"
             rel="noopener noreferrer"
             className="flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground"
-            title="تلگرام"
+            title={t("articles.telegram")}
           >
-            <span className="sr-only">اشتراک در تلگرام</span>
+            <span className="sr-only">{t("articles.shareTelegram")}</span>
             <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
               <path d="M3.478 2.404a.75.75 0 0 0-.926.941l2.432 7.905H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.905a.75.75 0 0 0 .926.94 60.519 60.519 0 0 0 18.445-8.588.75.75 0 0 0 0-1.212A60.517 60.517 0 0 0 3.478 2.404Z" />
             </svg>
@@ -73,9 +75,9 @@ export function ArticleShareBar({
             target="_blank"
             rel="noopener noreferrer"
             className="flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground"
-            title="واتساپ"
+            title={t("articles.whatsapp")}
           >
-            <span className="sr-only">اشتراک در واتساپ</span>
+            <span className="sr-only">{t("articles.shareWhatsapp")}</span>
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" aria-hidden="true">
               <path
                 strokeLinecap="round"
@@ -89,9 +91,9 @@ export function ArticleShareBar({
             target="_blank"
             rel="noopener noreferrer"
             className="flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground"
-            title="ایکس"
+            title={t("articles.x")}
           >
-            <span className="sr-only">اشتراک در ایکس</span>
+            <span className="sr-only">{t("articles.shareX")}</span>
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" aria-hidden="true">
               <path
                 strokeLinecap="round"
@@ -105,9 +107,9 @@ export function ArticleShareBar({
             target="_blank"
             rel="noopener noreferrer"
             className="flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground"
-            title="فیسبوک"
+            title={t("articles.facebook")}
           >
-            <span className="sr-only">اشتراک در فیسبوک</span>
+            <span className="sr-only">{t("articles.shareFacebook")}</span>
             <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
               <path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.988h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" />
             </svg>
