@@ -1,15 +1,21 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import { Check, Star, Trash2 } from "lucide-react";
-import { feedbackStatusLabels, isFeedbackStatus, type FeedbackRow } from "@/lib/feedback-table";
-import { faDate, faNum } from "@/lib/site";
+import type { TranslateFn } from "@/i18n";
+import { isFeedbackStatus, type FeedbackRow } from "@/lib/feedback-table";
 
 type FeedbackColumnsProps = {
+  t: TranslateFn;
+  d: (value: string | Date) => string;
+  n: (value: number, fractionDigits?: number) => string;
   onReview?: (row: FeedbackRow) => void;
   onDelete?: (row: FeedbackRow) => void;
   reviewingId?: string | null;
 };
 
 export function createFeedbackColumns({
+  t,
+  d,
+  n,
   onReview,
   onDelete,
   reviewingId = null,
@@ -24,14 +30,14 @@ export function createFeedbackColumns({
 
   columns.push({
     accessorKey: "author",
-    header: "مشتری",
+    header: t("admin.colCustomer"),
     cell: ({ row }) => <p className="whitespace-nowrap font-semibold">{row.original.author}</p>,
   });
 
   columns.push(
     {
       accessorKey: "body",
-      header: "متن",
+      header: t("admin.colBody"),
       enableSorting: false,
       cell: ({ row }) => (
         <p className="max-w-sm text-sm leading-6 text-muted-foreground line-clamp-2">
@@ -41,11 +47,11 @@ export function createFeedbackColumns({
     },
     {
       accessorKey: "rating",
-      header: "امتیاز",
+      header: t("admin.colRating"),
       cell: ({ row }) => (
         <span
           className="inline-flex items-center gap-0.5"
-          aria-label={`${faNum(row.original.rating, 0)} از ۵`}
+          aria-label={t("admin.ratingOfFive", { rating: n(row.original.rating, 0) })}
         >
           {Array.from({ length: 5 }, (_, index) => (
             <Star
@@ -62,9 +68,9 @@ export function createFeedbackColumns({
     },
     {
       accessorKey: "created_at",
-      header: "تاریخ",
+      header: t("admin.colDate"),
       cell: ({ row }) => (
-        <p className="whitespace-nowrap text-muted-foreground">{faDate(row.original.created_at)}</p>
+        <p className="whitespace-nowrap text-muted-foreground">{d(row.original.created_at)}</p>
       ),
     },
   );
@@ -72,20 +78,20 @@ export function createFeedbackColumns({
   columns.push(
     {
       accessorKey: "status",
-      header: "وضعیت",
+      header: t("common.status"),
       cell: ({ row }) => {
         const status = isFeedbackStatus(row.original.status) ? row.original.status : "pending";
         switch (status) {
           case "reviewed":
             return (
               <span className="inline-flex rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary">
-                {feedbackStatusLabels.reviewed}
+                {t("admin.reviewed")}
               </span>
             );
           case "pending":
             return (
               <span className="inline-flex rounded-full border border-warning/40 bg-warning/15 px-2.5 py-1 text-[11px] font-semibold text-warning-foreground">
-                {feedbackStatusLabels.pending}
+                {t("admin.feedbackPending")}
               </span>
             );
           default: {
@@ -97,7 +103,7 @@ export function createFeedbackColumns({
     },
     {
       id: "actions",
-      header: "عملیات",
+      header: t("common.actions"),
       enableSorting: false,
       cell: ({ row }) => (
         <div className="flex flex-wrap items-center gap-2">
@@ -108,7 +114,7 @@ export function createFeedbackColumns({
               onClick={() => onReview(row.original)}
               className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold disabled:opacity-60"
             >
-              <Check className="size-3.5" /> بررسی شد
+              <Check className="size-3.5" /> {t("admin.markReviewed")}
             </button>
           ) : null}
           {onDelete ? (
@@ -117,7 +123,7 @@ export function createFeedbackColumns({
               onClick={() => onDelete(row.original)}
               className="inline-flex items-center gap-1.5 rounded-lg border border-destructive/40 px-3 py-1.5 text-xs font-semibold text-destructive disabled:opacity-60"
             >
-              <Trash2 className="size-3.5" /> حذف
+              <Trash2 className="size-3.5" /> {t("common.delete")}
             </button>
           ) : null}
         </div>

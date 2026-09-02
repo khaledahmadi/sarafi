@@ -27,12 +27,18 @@ class Settings(BaseSettings):
 
     UPLOAD_DIR: str = "uploads"
 
+    RATE_SYNC_ENABLED: bool = True
+    RATE_SYNC_INTERVAL_SECONDS: int = 30
+    RATE_SYNC_STALE_AFTER_SECONDS: int = 90
+    RATE_SYNC_FAILURE_BACKOFF_MAX_SECONDS: int = 300
+    RATE_SYNC_HTTP_TIMEOUT_SECONDS: float = 20.0
+
     COOKIE_SECURE: bool = False
     COOKIE_SAMESITE: str = "lax"
     ACCESS_COOKIE_NAME: str = "sarafi_suite_access"
     REFRESH_COOKIE_NAME: str = "sarafi_suite_refresh"
 
-    @field_validator("DEBUG", "COOKIE_SECURE", mode="before")
+    @field_validator("DEBUG", "COOKIE_SECURE", "RATE_SYNC_ENABLED", mode="before")
     @classmethod
     def _parse_bool(cls, v: object) -> object:
         if isinstance(v, str):

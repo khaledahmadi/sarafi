@@ -1,10 +1,11 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_user_optional
+from app.core.rate_sources import normalize_rate_source
 from app.models.user import User
 from app.schemas.article import ArticleDetailOut, ArticleListOut
 from app.schemas.branch import BranchPublicOut
@@ -29,8 +30,11 @@ router = APIRouter(tags=["public"])
 
 
 @router.get("/rates", response_model=list[CurrencyPublicOut])
-def list_rates(db: Session = Depends(get_db)) -> list[CurrencyPublicOut]:
-    rows = currencies_service.list_active_currencies(db)
+def list_rates(
+    db: Session = Depends(get_db),
+    source: str = Query(default="sarai_shahzada"),
+) -> list[CurrencyPublicOut]:
+    rows = currencies_service.list_active_currencies(db, rate_source=normalize_rate_source(source))
     return [CurrencyPublicOut.model_validate(r) for r in rows]
 
 

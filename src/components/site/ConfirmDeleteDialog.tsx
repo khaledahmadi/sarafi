@@ -10,6 +10,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { buttonVariants } from "@/components/ui/button";
+import { useLocale } from "@/i18n";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -28,15 +29,18 @@ export function ConfirmDeleteDialog({
   title,
   description,
   itemName,
-  confirmLabel = "حذف",
+  confirmLabel,
   pending = false,
   onOpenChange,
   onConfirm,
 }: Props) {
+  const { t, dir } = useLocale();
+  const label = confirmLabel ?? t("common.delete");
+
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent
-        dir="rtl"
+        dir={dir}
         className="max-w-[26rem] gap-0 overflow-hidden rounded-2xl border-border p-0 shadow-xl sm:rounded-2xl"
       >
         <AlertDialogHeader className="space-y-0 px-6 pb-0 pt-6 text-start">
@@ -68,13 +72,13 @@ export function ConfirmDeleteDialog({
             )}
             onClick={onConfirm}
           >
-            {pending ? "در حال حذف…" : confirmLabel}
+            {pending ? t("common.deleting") : label}
           </AlertDialogAction>
           <AlertDialogCancel
             disabled={pending}
             className="mt-0 min-h-11 rounded-xl px-5 font-semibold"
           >
-            انصراف
+            {t("common.cancel")}
           </AlertDialogCancel>
         </AlertDialogFooter>
       </AlertDialogContent>

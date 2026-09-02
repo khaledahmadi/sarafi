@@ -14,37 +14,35 @@ import {
   Briefcase,
   Send,
 } from "lucide-react";
-import { ratesQuery, servicesQuery, articlesQuery, settingsQuery, branchesQuery } from "@/lib/queries";
+import { ratesQuery, servicesQuery, articlesQuery, settingsQuery, branchesQuery, prefetchRateSources } from "@/lib/queries";
+import { useRateSource } from "@/hooks/use-rate-source";
+import { useRates } from "@/hooks/use-rates";
 import { RateTable } from "@/components/site/RateTable";
-import { CurrencyConverter } from "@/components/site/CurrencyConverter";
+import { RatesCalculatorCard } from "@/components/site/RatesCalculatorCard";
 import { SectionHeading } from "@/components/site/Sections";
 import { ArticleCard } from "@/components/site/ArticleCard";
 import { site } from "@/lib/site";
 import { useGlanceStats } from "@/hooks/use-glance-stats";
 import { useSiteSettings } from "@/hooks/use-settings";
+import { pickLocalized, useLocale } from "@/i18n";
+import { pageMeta, resolvePageLocale } from "@/i18n/meta";
+import { cn } from "@/lib/utils";
 import heroImage from "@/assets/hero-navy.jpg";
 
-const title = `${site.name} | نرخ لحظه‌ای اسعار و حواله بین‌المللی`;
-const description = site.description;
-
 export const Route = createFileRoute("/")({
-  head: () => ({
-    meta: [
-      { title },
-      { name: "description", content: description },
-      { property: "og:title", content: title },
-      { property: "og:description", content: description },
-    ],
-  }),
   loader: async ({ context }) => {
+    const locale = await resolvePageLocale();
     await Promise.all([
-      context.queryClient.ensureQueryData(ratesQuery),
+      prefetchRateSources(context.queryClient),
       context.queryClient.ensureQueryData(servicesQuery),
       context.queryClient.ensureQueryData(articlesQuery),
       context.queryClient.ensureQueryData(branchesQuery),
       context.queryClient.ensureQueryData(settingsQuery),
     ]);
+    return { locale };
   },
+  head: ({ loaderData }) =>
+    pageMeta(loaderData?.locale ?? "fa", "meta.homeTitle", "meta.homeDescription"),
   component: Index,
 });
 
@@ -61,10 +59,12 @@ const icons: Record<string, typeof Send> = {
 const advantageIcons = [Timer, ShieldCheck, BadgePercent, Globe2];
 
 function Index() {
-  const { data: rates } = useSuspenseQuery(ratesQuery);
+  const { source, setSource } = useRateSource();
+  const { data: rates = [], isFetching: ratesFetching } = useRates(source);
   const { data: services } = useSuspenseQuery(servicesQuery);
   const { data: articles } = useSuspenseQuery(articlesQuery);
   const { get } = useSiteSettings();
+  const { locale } = useLocale();
   const stats = useGlanceStats();
 
   const advantages = [1, 2, 3, 4]
@@ -122,16 +122,26 @@ function Index() {
             </dl>
           </div>
 
-          <div className="space-y-4">
-            <div className="rounded-2xl border border-white/15 bg-white/5 p-2 backdrop-blur">
-              <CurrencyConverter rates={rates} />
-              <Link
-                to="/rates"
-                className="flex items-center justify-center gap-2 py-3 text-sm font-semibold text-accent"
-              >
-                {get("home.rates_full_link")} <ArrowLeft className="size-4" />
-              </Link>
-            </div>
+          <div
+            className={cn(
+              "mx-auto w-full max-w-md transition-opacity duration-200 lg:mx-0 lg:max-w-sm xl:max-w-md",
+              ratesFetching && "opacity-80",
+            )}
+          >
+            <RatesCalculatorCard
+              rates={rates}
+              source={source}
+              onSourceChange={setSource}
+              compact
+              footer={
+                <Link
+                  to="/rates"
+                  className="flex items-center justify-center gap-2 py-2.5 text-xs font-semibold text-primary transition-colors hover:text-primary/80 sm:text-sm"
+                >
+                  {get("home.rates_full_link")} <ArrowLeft className="size-4" />
+                </Link>
+              }
+            />
           </div>
         </div>
       </section>
@@ -141,8 +151,8 @@ function Index() {
           <span className="inline-block size-2 animate-pulse rounded-full bg-success" />
           {get("home.live_rates_notice")}
         </div>
-        <div className="mt-6">
-          <RateTable rates={rates} compact showLiveLabel={false} />
+        <div className={cn("mt-6 transition-opacity duration-200", ratesFetching && "opacity-80")}>
+          <RateTable rates={rates} source={source} compact showLiveLabel={false} />
           <div className="mt-4 text-center">
             <Link
               to="/rates"
@@ -171,8 +181,28 @@ function Index() {
                 <span className="grid size-12 place-items-center rounded-xl bg-primary text-accent">
                   <Icon className="size-6" />
                 </span>
-                <h3 className="mt-5 text-lg font-bold">{service.title_fa}</h3>
-                <p className="mt-3 text-sm leading-7 text-muted-foreground">{service.summary_fa}</p>
+                <h3 className="mt-5 text-lg font-bold">
+                  {pickLocalized(
+                    {
+                      title_fa: service.title_fa,
+                      title_en: (service as { title_en?: string }).title_en,
+                      title_ps: (service as { title_ps?: string }).title_ps,
+                    },
+                    "title",
+                    locale,
+                  )}
+                </h3>
+                <p className="mt-3 text-sm leading-7 text-muted-foreground">
+                  {pickLocalized(
+                    {
+                      summary_fa: service.summary_fa,
+                      summary_en: (service as { summary_en?: string }).summary_en,
+                      summary_ps: (service as { summary_ps?: string }).summary_ps,
+                    },
+                    "summary",
+                    locale,
+                  )}
+                </p>
               </article>
             );
           })}
@@ -214,8 +244,24 @@ function Index() {
             <ArticleCard
               key={article.slug}
               slug={article.slug}
-              title={article.title_fa}
-              excerpt={article.excerpt_fa}
+              title={pickLocalized(
+                {
+                  title_fa: article.title_fa,
+                  title_en: (article as { title_en?: string }).title_en,
+                  title_ps: (article as { title_ps?: string }).title_ps,
+                },
+                "title",
+                locale,
+              )}
+              excerpt={pickLocalized(
+                {
+                  excerpt_fa: article.excerpt_fa,
+                  excerpt_en: (article as { excerpt_en?: string }).excerpt_en,
+                  excerpt_ps: (article as { excerpt_ps?: string }).excerpt_ps,
+                },
+                "excerpt",
+                locale,
+              )}
               coverUrl={article.cover_url}
               publishedAt={article.published_at}
               heading="h3"

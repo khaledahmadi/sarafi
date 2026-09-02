@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AppSelect } from "@/components/site/Field";
 import { Skeleton } from "@/components/ui/skeleton";
-import { faNum } from "@/lib/site";
+import { useLocale } from "@/i18n";
 
 type DataTableProps<TData, TValue> = {
   columns: ColumnDef<TData, TValue>[];
@@ -33,12 +33,15 @@ export function DataTable<TData, TValue>({
   columns,
   data,
   searchKey,
-  searchPlaceholder = "جست‌وجو…",
+  searchPlaceholder,
   pageSize = 10,
   loading = false,
   toolbar,
-  emptyLabel = "موردی یافت نشد.",
+  emptyLabel,
 }: DataTableProps<TData, TValue>) {
+  const { t, n } = useLocale();
+  const resolvedSearchPlaceholder = searchPlaceholder ?? t("common.searchPlaceholder");
+  const resolvedEmptyLabel = emptyLabel ?? t("common.noResultsPeriod");
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [pagination, setPagination] = useState<PaginationState>({
@@ -79,13 +82,13 @@ export function DataTable<TData, TValue>({
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
           {searchKey ? (
             <label className="relative min-w-0 flex-1">
-              <span className="sr-only">{searchPlaceholder}</span>
+              <span className="sr-only">{resolvedSearchPlaceholder}</span>
               <Search className="pointer-events-none absolute top-1/2 end-3 size-4 -translate-y-1/2 text-muted-foreground" />
               <input
                 type="search"
                 value={(table.getColumn(searchKey)?.getFilterValue() as string) ?? ""}
                 onChange={(event) => table.getColumn(searchKey)?.setFilterValue(event.target.value)}
-                placeholder={searchPlaceholder}
+                placeholder={resolvedSearchPlaceholder}
                 className="form-field h-11 w-full rounded-xl pe-10 ps-4 text-sm"
               />
             </label>
@@ -153,7 +156,7 @@ export function DataTable<TData, TValue>({
                     colSpan={columns.length}
                     className="h-24 px-4 text-center text-muted-foreground"
                   >
-                    {emptyLabel}
+                    {resolvedEmptyLabel}
                   </TableCell>
                 </TableRow>
               )}
@@ -164,22 +167,22 @@ export function DataTable<TData, TValue>({
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
-          <p className="text-sm text-muted-foreground">تعداد در صفحه</p>
+          <p className="text-sm text-muted-foreground">{t("common.rowsPerPage")}</p>
           <AppSelect
             size="sm"
-            ariaLabel="تعداد ردیف در صفحه"
+            ariaLabel={t("common.rowsPerPageAria")}
             value={String(currentPageSize)}
             onValueChange={(value) => table.setPageSize(Number(value))}
             options={[10, 25, 50].map((size) => ({
               value: String(size),
-              label: faNum(size, 0),
+              label: n(size, 0),
             }))}
             className="w-24"
           />
         </div>
         <div className="flex items-center justify-between gap-3 sm:justify-end">
           <p className="text-sm text-muted-foreground">
-            صفحه {faNum(pageIndex + 1, 0)} از {faNum(pageCount, 0)}
+            {t("common.pageOf", { page: n(pageIndex + 1, 0), pages: n(pageCount, 0) })}
           </p>
           <div className="flex items-center gap-2">
             <Button
@@ -189,7 +192,7 @@ export function DataTable<TData, TValue>({
               className="min-h-11 min-w-11"
               disabled={!table.getCanPreviousPage()}
               onClick={() => table.previousPage()}
-              aria-label="صفحه قبل"
+              aria-label={t("common.prevPage")}
             >
               <ChevronRight className="size-4" />
             </Button>
@@ -200,7 +203,7 @@ export function DataTable<TData, TValue>({
               className="min-h-11 min-w-11"
               disabled={!table.getCanNextPage()}
               onClick={() => table.nextPage()}
-              aria-label="صفحه بعد"
+              aria-label={t("common.nextPage")}
             >
               <ChevronLeft className="size-4" />
             </Button>

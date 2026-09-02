@@ -17,23 +17,23 @@ import {
   updateTransferStatus,
 } from "@/lib/portal.functions";
 import { ratesQuery } from "@/lib/queries";
+import { useRateSource } from "@/hooks/use-rate-source";
 import { fieldErrorMap, friendlyError, parseNum, transferSchema, transferStatuses } from "@/lib/validation";
-import { faNum, site, statusLabels } from "@/lib/site";
+import { site } from "@/lib/site";
+import { useLocale } from "@/i18n";
+import { pageMeta, resolvePageLocale } from "@/i18n/meta";
 
 export const Route = createFileRoute("/_authenticated/dashboard/transfers")({
-  head: () => ({
-    meta: [
-      { title: `درخواست‌های حواله | ${site.name}` },
-      { name: "robots", content: "noindex" },
-    ],
-  }),
+  loader: async () => ({ locale: await resolvePageLocale() }),
+  head: ({ loaderData }) => {
+    const base = pageMeta(loaderData?.locale ?? "fa", "meta.transfersTitle");
+    return {
+      ...base,
+      meta: [...base.meta, { name: "robots", content: "noindex" }],
+    };
+  },
   component: TransfersPage,
 });
-
-const statusOptions = transferStatuses.map((status) => ({
-  value: status,
-  label: statusLabels[status] ?? status,
-}));
 
 type Transfer = Awaited<ReturnType<typeof listAdminTransfers>>[number];
 
@@ -60,17 +60,24 @@ const emptyForm: FormState = {
 
 function TransfersPage() {
   const queryClient = useQueryClient();
+  const { source } = useRateSource();
+  const { t, n } = useLocale();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
   const [form, setForm] = useState<FormState>(emptyForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [pendingDelete, setPendingDelete] = useState<Transfer | null>(null);
 
+  const statusOptions = transferStatuses.map((status) => ({
+    value: status,
+    label: t(`status.${status}`),
+  }));
+
   const transfers = useQuery({
     queryKey: ["admin-transfers"],
     queryFn: listAdminTransfers,
   });
-  const rates = useQuery(ratesQuery);
+  const rates = useQuery(ratesQuery(source));
 
   const currencyOptions = useMemo(() => {
     const fromRates = (rates.data ?? []).map((row) => ({
@@ -116,7 +123,7 @@ function TransfersPage() {
       const parsed = transferSchema.safeParse(payload);
       if (!parsed.success) {
         setErrors(fieldErrorMap(parsed.error));
-        throw new Error("اطلاعات فرم را بررسی کنید");
+        throw new Error(t("common.formInvalid"));
       }
       const result = form.id
         ? await updateTransfer({ data: { id: form.id, ...parsed.data } })
@@ -131,10 +138,10 @@ function TransfersPage() {
     onSuccess: (data) => {
       toast.success(
         form.id
-          ? "درخواست حواله ویرایش شد"
+          ? t("admin.transfersSaved")
           : data?.reference
-            ? `درخواست با کد ${data.reference} ثبت شد`
-            : "درخواست حواله ثبت شد",
+            ? t("admin.transfersCreatedRef", { ref: data.reference })
+            : t("admin.transfersCreated"),
       );
       setForm(emptyForm);
       invalidate();
@@ -149,11 +156,11 @@ function TransfersPage() {
         toast.error(result.message);
         return;
       }
-      toast.success("درخواست حواله حذف شد");
+      toast.success(t("admin.transfersDeleted"));
       setForm((prev) => (prev.id ? emptyForm : prev));
       invalidate();
     },
-    onError: () => toast.error("حذف درخواست ممکن نشد"),
+    onError: () => toast.error(t("admin.transfersDeleteFailed")),
   });
 
   const setStatus = useMutation({
@@ -162,7 +169,7 @@ function TransfersPage() {
       if (!result.ok) throw new Error(result.message);
     },
     onSuccess: () => {
-      toast.success("وضعیت درخواست بروزرسانی شد");
+      toast.success(t("admin.transfersStatusUpdated"));
       invalidate();
     },
     onError: (error: Error) => toast.error(error.message),
@@ -174,7 +181,7 @@ function TransfersPage() {
       if (!result.ok) throw new Error(result.message);
     },
     onSuccess: () => {
-      toast.success("یادداشت ذخیره شد");
+      toast.success(t("admin.transfersNoteSaved"));
       invalidate();
     },
     onError: (error: Error) => toast.error(error.message),
@@ -207,30 +214,28 @@ function TransfersPage() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-2xl font-extrabold">درخواست‌های حواله</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          درخواست تازه ثبت کنید، ویرایش یا حذف کنید، وضعیت را به‌روزرسانی کنید و برای مشتری یادداشت بگذارید.
-        </p>
+        <h1 className="text-2xl font-extrabold">{t("admin.transfersTitle")}</h1>
+        <p className="mt-2 text-sm text-muted-foreground">{t("admin.transfersSubtitle")}</p>
       </header>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
         <div className="min-w-0 space-y-4">
           <div className="grid gap-4 p-5 card-elevated sm:grid-cols-2 sm:items-end">
             <TextField
-              label="جست‌وجو"
+              label={t("common.search")}
               fieldSize="sm"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="کد پیگیری، گیرنده یا مقصد"
+              placeholder={t("admin.transfersSearchPh")}
             />
             <div>
-              <p className="form-label mb-2">فیلتر وضعیت</p>
+              <p className="form-label mb-2">{t("admin.statusFilter")}</p>
               <AppSelect
                 size="sm"
-                ariaLabel="فیلتر وضعیت"
+                ariaLabel={t("admin.statusFilter")}
                 value={filter}
                 onValueChange={setFilter}
-                options={[{ value: "all", label: "همه وضعیت‌ها" }, ...statusOptions]}
+                options={[{ value: "all", label: t("common.all") }, ...statusOptions]}
               />
             </div>
           </div>
@@ -238,12 +243,12 @@ function TransfersPage() {
           <div className="space-y-3">
             {transfers.isLoading && (
               <p className="rounded-xl bg-secondary p-5 text-sm text-muted-foreground">
-                در حال بارگذاری…
+                {t("common.loading")}
               </p>
             )}
             {!transfers.isLoading && rows.length === 0 && (
               <p className="rounded-xl bg-secondary p-6 text-sm text-muted-foreground">
-                درخواستی یافت نشد.
+                {t("admin.transfersEmpty")}
               </p>
             )}
             {rows.map((item) => {
@@ -255,25 +260,30 @@ function TransfersPage() {
                       {item.reference}
                       {form.id === item.id && (
                         <span className="ms-2 rounded-full bg-accent/20 px-2 py-0.5 text-[10px] font-bold text-accent-foreground">
-                          در حال ویرایش
+                          {t("common.editing")}
                         </span>
                       )}
                     </p>
                     <p className="mt-1 font-bold">
-                      {faNum(item.amount)} <span dir="ltr">{item.from_currency}</span> →{" "}
+                      {n(item.amount)} <span dir="ltr">{item.from_currency}</span> →{" "}
                       <span dir="ltr">{item.to_currency}</span>
                     </p>
                     <p className="mt-2 text-sm text-muted-foreground">
-                      گیرنده: {item.recipient_name} — {item.recipient_detail}
+                      {t("admin.recipientLine", {
+                        name: item.recipient_name,
+                        detail: item.recipient_detail,
+                      })}
                     </p>
-                    <p className="text-sm text-muted-foreground">مقصد: {item.destination_fa}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {t("admin.destinationLine", { dest: item.destination_fa })}
+                    </p>
                     <div className="mt-3 flex gap-2">
                       <button
                         type="button"
                         onClick={() => startEdit(item)}
                         className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold"
                       >
-                        <Pencil className="size-3.5" /> ویرایش
+                        <Pencil className="size-3.5" /> {t("common.edit")}
                       </button>
                       <button
                         type="button"
@@ -281,21 +291,21 @@ function TransfersPage() {
                         onClick={() => setPendingDelete(item)}
                         className="inline-flex items-center gap-1.5 rounded-lg border border-destructive/40 px-3 py-1.5 text-xs font-semibold text-destructive disabled:opacity-60"
                       >
-                        <Trash2 className="size-3.5" /> حذف
+                        <Trash2 className="size-3.5" /> {t("common.delete")}
                       </button>
                     </div>
                   </div>
                   <div className="space-y-2">
                     <AppSelect
                       size="sm"
-                      ariaLabel={`وضعیت درخواست ${item.reference}`}
+                      ariaLabel={t("admin.statusAria", { ref: item.reference })}
                       value={item.status}
                       options={statusOptions}
                       onValueChange={(status) => setStatus.mutate({ id: item.id, status })}
                     />
                     <textarea
                       className={`${fieldClassSm} min-h-20`}
-                      placeholder="یادداشت برای مشتری"
+                      placeholder={t("admin.noteCustomer")}
                       defaultValue={item.staff_note ?? ""}
                       maxLength={500}
                       onBlur={(event) =>
@@ -318,55 +328,57 @@ function TransfersPage() {
           }}
           className="h-fit space-y-4 p-5 card-elevated"
         >
-          <h2 className="text-base font-bold">{form.id ? "ویرایش درخواست" : "ثبت درخواست تازه"}</h2>
+          <h2 className="text-base font-bold">
+            {form.id ? t("admin.transfersEdit") : t("admin.transfersAdd")}
+          </h2>
           <SelectField
-            label="ارز مبدا"
+            label={t("admin.fromCurrency")}
             value={form.from_currency}
             options={currencyOptions}
             error={errors["from_currency"]}
             onValueChange={(value) => update("from_currency", value)}
           />
           <SelectField
-            label="ارز مقصد"
+            label={t("admin.toCurrency")}
             value={form.to_currency}
             options={currencyOptions}
             error={errors["to_currency"]}
             onValueChange={(value) => update("to_currency", value)}
           />
           <TextField
-            label="مبلغ"
+            label={t("admin.amount")}
             inputMode="decimal"
-            hint="مبلغ را به عدد وارد کنید"
+            hint={t("admin.amountHint")}
             value={form.amount}
             error={errors["amount"]}
             onChange={(event) => update("amount", event.target.value)}
           />
           <SearchableSelectField
-            label="کشور مقصد"
-            hint="فقط کشورهای مربوط به ارزهای فعال"
+            label={t("admin.destination")}
+            hint={t("admin.destinationHint")}
             value={form.destination_fa}
             error={errors["destination_fa"]}
             options={destinationOptions}
-            placeholder="انتخاب کشور"
-            searchPlaceholder="جست‌وجوی کشور…"
+            placeholder={t("admin.destinationPh")}
+            searchPlaceholder={t("admin.destinationSearch")}
             onValueChange={(value) => update("destination_fa", value)}
           />
           <TextField
-            label="نام گیرنده"
+            label={t("admin.recipientName")}
             maxLength={120}
             value={form.recipient_name}
             error={errors["recipient_name"]}
             onChange={(event) => update("recipient_name", event.target.value)}
           />
           <TextField
-            label="مشخصات حساب گیرنده"
+            label={t("admin.recipientDetail")}
             maxLength={300}
             value={form.recipient_detail}
             error={errors["recipient_detail"]}
             onChange={(event) => update("recipient_detail", event.target.value)}
           />
           <TextAreaField
-            label="توضیحات (اختیاری)"
+            label={t("admin.noteOptional")}
             maxLength={500}
             value={form.note}
             error={errors["note"]}
@@ -379,7 +391,11 @@ function TransfersPage() {
               className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground disabled:opacity-60"
             >
               <Plus className="size-4" />
-              {save.isPending ? "در حال ذخیره…" : form.id ? "ذخیره تغییرات" : "ثبت درخواست"}
+              {save.isPending
+                ? t("admin.saving")
+                : form.id
+                  ? t("admin.saveChanges")
+                  : t("admin.registerRequest")}
             </button>
             {form.id && (
               <button
@@ -387,7 +403,7 @@ function TransfersPage() {
                 onClick={cancelEdit}
                 className="rounded-lg border border-border px-4 py-2.5 text-sm font-semibold"
               >
-                لغو ویرایش
+                {t("admin.cancelEdit")}
               </button>
             )}
           </div>
@@ -396,9 +412,11 @@ function TransfersPage() {
 
       <ConfirmDeleteDialog
         open={Boolean(pendingDelete)}
-        title="حذف درخواست حواله"
-        itemName={pendingDelete ? `${pendingDelete.reference} — ${pendingDelete.recipient_name}` : undefined}
-        description="این درخواست برای همیشه حذف می‌شود و دیگر قابل بازیابی نیست."
+        title={t("admin.transfersDeleteTitle")}
+        itemName={
+          pendingDelete ? `${pendingDelete.reference} — ${pendingDelete.recipient_name}` : undefined
+        }
+        description={t("admin.transfersDeleteDesc")}
         pending={remove.isPending}
         onOpenChange={(open) => !open && setPendingDelete(null)}
         onConfirm={() => {

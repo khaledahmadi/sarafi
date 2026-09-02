@@ -17,12 +17,13 @@ import { useSiteSettings } from "@/hooks/use-settings";
 import { openSiteChat } from "@/lib/chat-widget";
 import { filterFaqs } from "@/lib/faq-page";
 import { faqsQuery } from "@/lib/queries";
-import { faNum } from "@/lib/site";
+import { pickLocalized, useLocale } from "@/i18n";
 import { cn } from "@/lib/utils";
 
 export function FaqView() {
   const { data: faqs } = useSuspenseQuery(faqsQuery);
   const { get } = useSiteSettings();
+  const { locale, t, n } = useLocale();
   const [query, setQuery] = useState("");
   const [openId, setOpenId] = useState<string | undefined>(faqs[0]?.id);
   const filtered = useMemo(() => filterFaqs(faqs, query), [faqs, query]);
@@ -40,9 +41,9 @@ export function FaqView() {
     <>
       <PageHero
         variant="soft"
-        eyebrow="سؤالات متداول"
-        title="پاسخ روشن به پرسش‌های شما"
-        description="قبل از تماس، پاسخ نرخ، حواله و مدارک را اینجا پیدا کنید. اگر پیدا نکردید، گفتگوی سایت یا کارشناسان آماده کمک هستند."
+        eyebrow={t("faq.eyebrow")}
+        title={t("faq.heroTitle")}
+        description={t("faq.heroDescription")}
       >
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <button
@@ -51,13 +52,13 @@ export function FaqView() {
             className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-accent px-6 py-3 text-sm font-bold text-accent-foreground transition-transform hover:-translate-y-0.5"
           >
             <MessageCircle className="size-4" />
-            پرسش در گفتگو
+            {t("faq.askInChat")}
           </button>
           <Link
             to="/contact"
             className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/25 px-6 py-3 text-sm font-semibold text-navy-foreground hover:bg-white/10"
           >
-            تماس با کارشناسان
+            {t("faq.contactExperts")}
           </Link>
         </div>
       </PageHero>
@@ -65,7 +66,7 @@ export function FaqView() {
       <section className="relative z-10 mx-auto -mt-6 max-w-6xl px-4 md:-mt-8">
         <div className="relative card-elevated">
           <label className="sr-only" htmlFor="faq-search">
-            جست‌وجو در سؤالات متداول
+            {t("faq.searchLabel")}
           </label>
           <Search className="pointer-events-none absolute top-1/2 end-4 size-5 -translate-y-1/2 text-muted-foreground" />
           <input
@@ -73,7 +74,7 @@ export function FaqView() {
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="جست‌وجو کنید؛ مثلاً کارمزد، مدارک یا زمان حواله"
+            placeholder={t("faq.searchPlaceholderLong")}
             className={cn(
               "h-14 w-full bg-transparent pe-12 text-base outline-none [&::-webkit-search-cancel-button]:hidden",
               query ? "ps-14" : "ps-4",
@@ -84,7 +85,7 @@ export function FaqView() {
               type="button"
               onClick={() => setQuery("")}
               className="absolute top-1/2 start-3 grid size-11 -translate-y-1/2 place-items-center rounded-lg"
-              aria-label="پاک کردن جست‌وجو"
+              aria-label={t("faq.clearSearch")}
             >
               <X className="size-4 text-muted-foreground" />
             </button>
@@ -96,31 +97,31 @@ export function FaqView() {
         <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-10">
           <div>
             <SectionHeading
-              eyebrow="پرسش‌نامه"
-              title="پاسخ‌های آماده مشتریان"
+              eyebrow={t("faq.sectionEyebrow")}
+              title={t("faq.sectionTitle")}
               description={
                 faqs.length === 0
-                  ? "به‌زودی پرسش‌های پرتکرار اینجا قرار می‌گیرد."
-                  : `${faNum(filtered.length, 0)} سؤال از ${faNum(faqs.length, 0)} مورد`
+                  ? t("faq.emptySoon")
+                  : t("faq.count", {
+                      filtered: n(filtered.length, 0),
+                      total: n(faqs.length, 0),
+                    })
               }
             />
 
             {faqs.length === 0 ? (
-              <EmptyCard
-                title="هنوز پرسشی منتشر نشده است"
-                text="می‌توانید از گفتگوی سایت بپرسید یا با دفتر مرکزی تماس بگیرید."
-              />
+              <EmptyCard title={t("faq.emptyTitle")} text={t("faq.emptyText")} />
             ) : filtered.length === 0 ? (
               <EmptyCard
-                title="نتیجه‌ای پیدا نشد"
-                text="عبارت دیگری را امتحان کنید یا سؤال خود را در گفتگو بپرسید."
+                title={t("faq.noResultsTitle")}
+                text={t("faq.noResultsText")}
                 action={
                   <button
                     type="button"
                     onClick={() => setQuery("")}
                     className="inline-flex min-h-11 items-center rounded-xl border border-border px-4 text-sm font-semibold"
                   >
-                    پاک کردن جست‌وجو
+                    {t("faq.clearSearch")}
                   </button>
                 }
               />
@@ -128,7 +129,7 @@ export function FaqView() {
               <Accordion
                 type="single"
                 collapsible
-                value={openId}
+                value={openId ?? ""}
                 onValueChange={setOpenId}
                 className="space-y-3"
               >
@@ -138,7 +139,7 @@ export function FaqView() {
                     value={faq.id}
                     className="overflow-hidden rounded-2xl border border-border bg-card px-4 sm:px-5"
                   >
-                    <AccordionTrigger className="gap-3 py-5 text-right text-base font-bold hover:no-underline">
+                    <AccordionTrigger className="gap-3 py-5 text-start text-base font-bold hover:no-underline">
                       <span className="flex min-w-0 flex-1 items-start gap-3">
                         <span
                           className={cn(
@@ -148,13 +149,31 @@ export function FaqView() {
                               : "bg-primary/8 text-primary",
                           )}
                         >
-                          {faNum(index + 1, 0)}
+                          {n(index + 1, 0)}
                         </span>
-                        <span className="min-w-0 leading-7">{faq.question}</span>
+                        <span className="min-w-0 leading-7">
+                          {pickLocalized(
+                            {
+                              question_fa: faq.question,
+                              question_en: faq.question_en,
+                              question_ps: faq.question_ps,
+                            },
+                            "question",
+                            locale,
+                          )}
+                        </span>
                       </span>
                     </AccordionTrigger>
                     <AccordionContent className="ps-11 text-sm leading-8 text-muted-foreground whitespace-pre-line sm:ps-12">
-                      {faq.answer}
+                      {pickLocalized(
+                        {
+                          answer_fa: faq.answer,
+                          answer_en: faq.answer_en,
+                          answer_ps: faq.answer_ps,
+                        },
+                        "answer",
+                        locale,
+                      )}
                     </AccordionContent>
                   </AccordionItem>
                 ))}
@@ -167,10 +186,8 @@ export function FaqView() {
               <span className="grid size-11 place-items-center rounded-xl bg-primary text-accent">
                 <CircleHelp className="size-5" />
               </span>
-              <h2 className="mt-4 text-lg font-bold">هنوز پاسخ نگرفتید؟</h2>
-              <p className="mt-2 text-sm leading-7 text-muted-foreground">
-                سؤال خود را در گفتگوی سایت بپرسید یا با کارشناسان دفتر مرکزی صحبت کنید.
-              </p>
+              <h2 className="mt-4 text-lg font-bold">{t("faq.stillNeedHelp")}</h2>
+              <p className="mt-2 text-sm leading-7 text-muted-foreground">{t("faq.stillNeedHelpText")}</p>
               <div className="gold-rule mt-4" />
               <ul className="mt-5 space-y-4 text-sm">
                 {hours ? (
@@ -179,7 +196,7 @@ export function FaqView() {
                       <Clock className="size-4" />
                     </span>
                     <div>
-                      <p className="text-xs text-muted-foreground">ساعات کاری</p>
+                      <p className="text-xs text-muted-foreground">{t("common.hours")}</p>
                       <p className="mt-0.5 font-semibold leading-7">{hours}</p>
                     </div>
                   </li>
@@ -190,7 +207,7 @@ export function FaqView() {
                       <Phone className="size-4" />
                     </span>
                     <div>
-                      <p className="text-xs text-muted-foreground">تلفن</p>
+                      <p className="text-xs text-muted-foreground">{t("common.phone")}</p>
                       <a href={`tel:${phone.replace(/\s/g, "")}`} className="mt-0.5 block font-semibold" dir="ltr">
                         {phone}
                       </a>
@@ -204,13 +221,13 @@ export function FaqView() {
                 className="mt-6 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-bold text-primary-foreground"
               >
                 <MessageCircle className="size-4" />
-                باز کردن گفتگو
+                {t("faq.openChat")}
               </button>
               <Link
                 to="/contact"
                 className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-border px-4 text-sm font-semibold"
               >
-                صفحه تماس
+                {t("faq.contactPage")}
               </Link>
             </div>
 
@@ -219,8 +236,8 @@ export function FaqView() {
               className="flex items-center justify-between gap-3 p-5 card-elevated"
             >
               <div>
-                <p className="text-xs font-semibold text-accent">نرخ روز</p>
-                <p className="mt-1 text-sm font-bold">مشاهده نرخ لحظه‌ای اسعار</p>
+                <p className="text-xs font-semibold text-accent">{t("faq.ratesDay")}</p>
+                <p className="mt-1 text-sm font-bold">{t("faq.viewLiveRates")}</p>
               </div>
               <ArrowLeft className="size-4 text-muted-foreground" />
             </Link>
@@ -231,12 +248,12 @@ export function FaqView() {
       <section className="mx-auto max-w-6xl px-4 pb-16 md:pb-20">
         <div className="flex flex-col items-start justify-between gap-6 rounded-2xl surface-navy px-6 py-8 sm:px-8 md:flex-row md:items-center">
           <div>
-            <p className="text-sm font-semibold text-accent">آماده حواله هستید؟</p>
+            <p className="text-sm font-semibold text-accent">{t("faq.readyTransfer")}</p>
             <h2 className="mt-2 text-xl font-bold text-navy-foreground md:text-2xl">
-              درخواست خود را ثبت کنید تا کارشناس بررسی کند
+              {t("faq.readyTransferTitle")}
             </h2>
             <p className="mt-2 max-w-xl text-sm leading-7 text-navy-foreground/70">
-              اگر پاسخ را پیدا کردید، همین حالا حواله را از حساب کاربری ثبت کنید.
+              {t("faq.readyTransferText")}
             </p>
           </div>
           <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
@@ -245,13 +262,13 @@ export function FaqView() {
               className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-accent px-6 py-3 text-sm font-bold text-accent-foreground"
             >
               <Send className="size-4" />
-              ثبت درخواست
+              {t("faq.submitRequest")}
             </Link>
             <Link
               to="/services"
               className="inline-flex min-h-11 items-center justify-center rounded-xl border border-white/20 px-6 py-3 text-sm font-semibold text-navy-foreground hover:bg-white/10"
             >
-              مشاهده خدمات
+              {t("faq.viewServices")}
             </Link>
           </div>
         </div>

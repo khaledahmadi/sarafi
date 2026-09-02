@@ -19,10 +19,11 @@ import {
 import { errorClass, fieldWithError, hintClass, labelClass } from "@/lib/forms";
 import { sanitizeDecimalInput } from "@/lib/validation";
 import { cn } from "@/lib/utils";
+import { useLocale } from "@/i18n";
 
 /**
- * RTL-first form primitives. Every input across the app uses these so labels,
- * placeholders, helper text, errors and caret direction stay consistent.
+ * Form primitives. Labels, placeholders, helper text and errors stay consistent.
+ * Direction follows the active locale (rtl for fa/ps, ltr for en).
  */
 
 type FieldProps = {
@@ -71,13 +72,14 @@ export function TextField({
   id,
   ...rest
 }: TextFieldProps) {
+  const { dir } = useLocale();
   const autoId = React.useId();
   const fieldId = id ?? autoId;
   return (
     <Field label={label} htmlFor={fieldId} hint={hint} error={error}>
       <input
         id={fieldId}
-        dir="rtl"
+        dir={dir}
         aria-invalid={Boolean(error)}
         aria-describedby={error ? `${fieldId}-error` : undefined}
         className={cn(fieldWithError(fieldSize === "sm" ? baseSm : base, error), className)}
@@ -147,13 +149,14 @@ type TextAreaFieldProps = React.ComponentProps<"textarea"> & {
 };
 
 export function TextAreaField({ label, hint, error, className, id, ...rest }: TextAreaFieldProps) {
+  const { dir } = useLocale();
   const autoId = React.useId();
   const fieldId = id ?? autoId;
   return (
     <Field label={label} htmlFor={fieldId} hint={hint} error={error}>
       <textarea
         id={fieldId}
-        dir="rtl"
+        dir={dir}
         aria-invalid={Boolean(error)}
         className={cn(fieldWithError(base, error), "min-h-24 leading-7", className)}
         {...rest}
@@ -183,12 +186,12 @@ type AppSelectProps = {
   error?: string | undefined;
 };
 
-/** Accessible, styled RTL dropdown (replaces native <select>). */
+/** Accessible, styled dropdown (replaces native <select>). Direction follows locale. */
 export function AppSelect({
   value,
   onValueChange,
   options,
-  placeholder = "انتخاب کنید",
+  placeholder,
   disabled,
   size = "md",
   className,
@@ -196,8 +199,11 @@ export function AppSelect({
   id,
   error,
 }: AppSelectProps) {
+  const { t, dir } = useLocale();
+  const resolvedPlaceholder = placeholder ?? t("common.selectPlaceholder");
+
   return (
-    <Select value={value} onValueChange={onValueChange} disabled={disabled ?? false} dir="rtl">
+    <Select value={value} onValueChange={onValueChange} disabled={disabled ?? false} dir={dir}>
       <SelectTrigger
         id={id}
         aria-label={ariaLabel}
@@ -209,9 +215,9 @@ export function AppSelect({
           className,
         )}
       >
-        <SelectValue placeholder={placeholder} />
+        <SelectValue placeholder={resolvedPlaceholder} />
       </SelectTrigger>
-      <SelectContent dir="rtl" className="max-h-72 text-start">
+      <SelectContent dir={dir} className="max-h-72 text-start">
         {options.map((option) => (
           <SelectItem key={option.value} value={option.value} className="text-start">
             <span className="flex items-center gap-2">
@@ -253,8 +259,8 @@ export function SearchableSelect({
   value,
   onValueChange,
   options,
-  placeholder = "انتخاب کنید",
-  searchPlaceholder = "جست‌وجو کنید…",
+  placeholder,
+  searchPlaceholder,
   disabled,
   size = "md",
   className,
@@ -262,6 +268,9 @@ export function SearchableSelect({
   id,
   error,
 }: SearchableSelectProps) {
+  const { t, dir } = useLocale();
+  const resolvedPlaceholder = placeholder ?? t("common.selectPlaceholder");
+  const resolvedSearch = searchPlaceholder ?? t("common.searchEllipsis");
   const [open, setOpen] = React.useState(false);
   const listId = React.useId();
   const selected = options.find((option) => option.value === value);
@@ -287,19 +296,19 @@ export function SearchableSelect({
             className,
           )}
         >
-          <span className="min-w-0 flex-1 truncate">{selected?.label ?? placeholder}</span>
+          <span className="min-w-0 flex-1 truncate">{selected?.label ?? resolvedPlaceholder}</span>
           <ChevronsUpDown className="size-4 shrink-0 opacity-50" aria-hidden />
         </button>
       </PopoverTrigger>
       <PopoverContent
-        dir="rtl"
+        dir={dir}
         align="start"
         className="w-[var(--radix-popover-trigger-width)] p-0"
       >
-        <Command dir="rtl">
-          <CommandInput placeholder={searchPlaceholder} aria-label={searchPlaceholder} />
+        <Command dir={dir}>
+          <CommandInput placeholder={resolvedSearch} aria-label={resolvedSearch} />
           <CommandList id={listId} role="listbox">
-            <CommandEmpty>موردی یافت نشد</CommandEmpty>
+            <CommandEmpty>{t("common.noResults")}</CommandEmpty>
             <CommandGroup>
               {options.map((option) => (
                 <CommandItem

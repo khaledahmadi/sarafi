@@ -1,36 +1,30 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { AboutView } from "@/components/site/AboutView";
-import { branchesQuery, ratesQuery, settingsQuery } from "@/lib/queries";
-import { site } from "@/lib/site";
+import { branchesQuery, prefetchRateSources, settingsQuery } from "@/lib/queries";
 import { useGlanceStats } from "@/hooks/use-glance-stats";
 import { paragraphs, useSiteSettings } from "@/hooks/use-settings";
-
-const title = `درباره ${site.name} | صرافی معتبر`;
-const description =
-  "بیش از هجده سال تجربه در حواله بین‌المللی، تبادل اسعار و خدمات بازرگانی با تکیه بر اعتماد مشتریان.";
+import { useLocale } from "@/i18n";
+import { pageMeta, resolvePageLocale } from "@/i18n/meta";
 
 export const Route = createFileRoute("/about")({
-  head: () => ({
-    meta: [
-      { title },
-      { name: "description", content: description },
-      { property: "og:title", content: title },
-      { property: "og:description", content: description },
-    ],
-  }),
   loader: async ({ context }) => {
+    const locale = await resolvePageLocale();
     await Promise.all([
       context.queryClient.ensureQueryData(settingsQuery),
-      context.queryClient.ensureQueryData(ratesQuery),
+      prefetchRateSources(context.queryClient),
       context.queryClient.ensureQueryData(branchesQuery),
     ]);
+    return { locale };
   },
+  head: ({ loaderData }) =>
+    pageMeta(loaderData?.locale ?? "fa", "meta.aboutTitle", "meta.aboutDescription"),
   component: AboutPage,
 });
 
 function AboutPage() {
   const { get } = useSiteSettings();
+  const { t } = useLocale();
   const { data: branches } = useSuspenseQuery(branchesQuery);
   const glanceStats = useGlanceStats();
   const intro = paragraphs(get("about.intro") || get("about.body"));
@@ -52,7 +46,7 @@ function AboutPage() {
   return (
     <AboutView
       brandName={get("brand.name")}
-      heroDescription={get("about.hero_description", description)}
+      heroDescription={get("about.hero_description", t("meta.aboutDescription"))}
       intro={intro}
       stats={stats}
       values={values}

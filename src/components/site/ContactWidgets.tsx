@@ -3,11 +3,12 @@ import { Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Maximize2, MessageCircle, Minimize2, Send, X } from "lucide-react";
 import { useSiteSettings } from "@/hooks/use-settings";
+import { useRateSource } from "@/hooks/use-rate-source";
 import { OPEN_CHAT_EVENT } from "@/lib/chat-widget";
-import { chatSuggestions, composeChatReply, detectChatIntent, type ChatContext, type ChatRate } from "@/lib/chatbot";
+import { composeChatReply, detectChatIntent, buildChatSuggestions, localizePublicFaq, type ChatContext, type ChatRate } from "@/lib/chatbot";
 import { articlesQuery, branchesQuery, faqsQuery, ratesQuery, servicesQuery } from "@/lib/queries";
-import { faNum } from "@/lib/site";
 import { whatsappHref } from "@/lib/whatsapp";
+import { pickLocalized, useLocale } from "@/i18n";
 import { cn } from "@/lib/utils";
 
 type ChatMessage = {
@@ -35,10 +36,12 @@ function nextId() {
 
 export function ContactWidgets() {
   const { get } = useSiteSettings();
+  const { locale, dir, t, n } = useLocale();
   const queryClient = useQueryClient();
   const brandName = get("brand.name");
   const whatsapp = whatsappHref(get("contact.whatsapp"));
-  const rates = useQuery({ ...ratesQuery, enabled: true });
+  const { source } = useRateSource();
+  const rates = useQuery({ ...ratesQuery(source), enabled: true });
   const branches = useQuery({ ...branchesQuery, enabled: true });
   const services = useQuery({ ...servicesQuery, enabled: true });
   const articles = useQuery({ ...articlesQuery, enabled: true });
@@ -46,6 +49,7 @@ export function ContactWidgets() {
 
   const context = useMemo<ChatContext>(
     () => ({
+      locale,
       brandName,
       tagline: get("brand.tagline"),
       description: get("brand.description"),
@@ -58,28 +62,50 @@ export function ContactWidgets() {
       branches: branches.data ?? [],
       services: services.data ?? [],
       articles: articles.data ?? [],
-      faqs: faqs.data ?? [],
+      faqs: (faqs.data ?? [])
+        .map((faq) => localizePublicFaq(faq, locale, true))
+        .filter((faq): faq is ChatFaq => faq !== null),
     }),
-    [articles.data, brandName, branches.data, faqs.data, get, rates.data, services.data],
+    [articles.data, brandName, branches.data, faqs.data, get, locale, rates.data, services.data],
   );
-  const suggestions = chatSuggestions(context.faqs);
+
+  const suggestions = useMemo(
+    () =>
+      buildChatSuggestions(faqs.data ?? [], locale, {
+        suggestRates: t("chat.suggestRates"),
+        suggestRatesText: t("chat.suggestRatesText"),
+        suggestTransfer: t("chat.suggestTransfer"),
+        suggestTransferText: t("chat.suggestTransferText"),
+        suggestServices: t("chat.suggestServices"),
+        suggestServicesText: t("chat.suggestServicesText"),
+        suggestBranches: t("chat.suggestBranches"),
+        suggestBranchesText: t("chat.suggestBranchesText"),
+      }),
+    [faqs.data, locale, t],
+  );
 
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [draft, setDraft] = useState("");
   const [pending, setPending] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>(() => [
-    {
-      id: "welcome",
-      role: "bot",
-      text: `سلام، به ${brandName} خوش آمدید. نرخ لحظه‌ای، حواله، خدمات، نمایندگی‌ها یا تماس را بپرسید.`,
-    },
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const panelId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const threadRef = useRef<HTMLDivElement>(null);
   const replyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    setMessages((current) => {
+      if (current.length === 0) {
+        return [{ id: "welcome", role: "bot", text: t("chat.welcome", { brand: brandName }) }];
+      }
+      if (current.length === 1 && current[0]?.id === "welcome") {
+        return [{ id: "welcome", role: "bot", text: t("chat.welcome", { brand: brandName }) }];
+      }
+      return current;
+    });
+  }, [brandName, t]);
 
   function closeChat() {
     setOpen(false);
@@ -139,7 +165,7 @@ export function ContactWidgets() {
     let nextContext = context;
     if (detectChatIntent(trimmed) === "RATES") {
       try {
-        const freshRates = await queryClient.fetchQuery(ratesQuery);
+        const freshRates = await queryClient.fetchQuery(ratesQuery(source));
         nextContext = { ...context, rates: freshRates };
       } catch {
         nextContext = context;
@@ -149,7 +175,12 @@ export function ContactWidgets() {
     replyTimer.current = setTimeout(() => {
       setMessages((current) => [
         ...current,
-        { id: nextId(), role: "bot", text: reply.text, rates: reply.rates },
+        {
+          id: nextId(),
+          role: "bot",
+          text: reply.text,
+          ...(reply.rates ? { rates: reply.rates } : {}),
+        },
       ]);
       setPending(false);
     }, 350);
@@ -167,7 +198,7 @@ export function ContactWidgets() {
           href={whatsapp}
           target="_blank"
           rel="noopener noreferrer"
-          aria-label="گفتگو در واتساپ"
+          aria-label={t("chat.whatsappAria")}
           className="pointer-events-auto absolute bottom-5 left-5 grid size-14 place-items-center rounded-full bg-success text-success-foreground shadow-[0_8px_24px_-8px_oklch(0.45_0.12_155/0.7)] transition hover:brightness-110"
         >
           <WhatsAppIcon className="size-8" />
@@ -179,8 +210,9 @@ export function ContactWidgets() {
           <div
             id={panelId}
             role="dialog"
-            aria-label="گفتگوی پشتیبانی"
+            aria-label={t("chat.supportChatAria")}
             aria-expanded={expanded}
+            dir={dir}
             className={cn(
               "flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-[0_24px_60px_-28px_oklch(0.23_0.065_264/0.45)]",
               expanded
@@ -191,14 +223,14 @@ export function ContactWidgets() {
             <div className="flex items-start justify-between gap-3 bg-primary px-4 py-3 text-primary-foreground">
               <div>
                 <p className="text-sm font-bold">{brandName}</p>
-                <p className="mt-0.5 text-xs text-primary-foreground/75">پاسخگوی خودکار</p>
+                <p className="mt-0.5 text-xs text-primary-foreground/75">{t("chat.autoResponder")}</p>
               </div>
               <div className="flex items-center">
                 <button
                   type="button"
                   onClick={() => setExpanded((current) => !current)}
                   className="grid size-11 place-items-center rounded-lg"
-                  aria-label={expanded ? "کوچک‌کردن گفتگو" : "بزرگ‌کردن گفتگو"}
+                  aria-label={expanded ? t("chat.collapseChat") : t("chat.expandChat")}
                   aria-pressed={expanded}
                 >
                   {expanded ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
@@ -207,7 +239,7 @@ export function ContactWidgets() {
                   type="button"
                   onClick={closeChat}
                   className="grid size-11 place-items-center rounded-lg"
-                  aria-label="بستن گفتگو"
+                  aria-label={t("chat.closeChat")}
                 >
                   <X className="size-4" />
                 </button>
@@ -227,25 +259,27 @@ export function ContactWidgets() {
                   )}
                 >
                   <p className="whitespace-pre-line">{message.text}</p>
-                  {message.rates && message.rates.length > 0 ? <ChatRateCard rates={message.rates} /> : null}
+                  {message.rates && message.rates.length > 0 ? (
+                    <ChatRateCard rates={message.rates} t={t} n={n} locale={locale} />
+                  ) : null}
                 </div>
               ))}
               {pending ? (
                 <p className="max-w-[90%] rounded-2xl rounded-ss-md bg-muted px-3 py-2.5 text-sm text-muted-foreground">
-                  در حال نوشتن…
+                  {t("chat.typing")}
                 </p>
               ) : null}
             </div>
 
             <div className="space-y-3 border-t border-border p-3">
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap justify-start gap-2">
                 {suggestions.map((item) => (
                   <button
-                    key={item.label}
+                    key={`${item.label}-${item.text}`}
                     type="button"
                     disabled={pending}
                     onClick={() => void ask(item.text)}
-                    className="min-h-11 rounded-full border border-border px-3 text-xs font-semibold disabled:opacity-60"
+                    className="min-h-11 rounded-full border border-border px-3 text-start text-xs font-semibold disabled:opacity-60"
                   >
                     {item.label}
                   </button>
@@ -253,21 +287,21 @@ export function ContactWidgets() {
               </div>
               <form onSubmit={onSubmit} className="flex items-center gap-2">
                 <label className="sr-only" htmlFor={`${panelId}-message`}>
-                  پیام شما
+                  {t("chat.yourMessage")}
                 </label>
                 <input
                   id={`${panelId}-message`}
                   ref={inputRef}
                   value={draft}
                   onChange={(event) => setDraft(event.target.value)}
-                  placeholder="پیام خود را بنویسید…"
+                  placeholder={t("chat.writeMessage")}
                   className="min-h-11 flex-1 rounded-xl bg-muted px-3 text-sm"
                 />
                 <button
                   type="submit"
                   disabled={pending || !draft.trim()}
                   className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground disabled:opacity-50"
-                  aria-label="ارسال پیام"
+                  aria-label={t("chat.sendMessage")}
                 >
                   <Send className="size-4" />
                 </button>
@@ -285,7 +319,7 @@ export function ContactWidgets() {
                 className="inline-flex min-h-11 items-center gap-2 rounded-full bg-card px-4 text-sm font-semibold text-card-foreground shadow-[0_8px_24px_-10px_oklch(0.23_0.065_264/0.35)]"
               >
                 <span aria-hidden="true">👋</span>
-                <span dir="rtl">با ما گفتگو کنید</span>
+                <span>{t("chat.chatWithUs")}</span>
               </button>
             )}
             <button
@@ -299,7 +333,7 @@ export function ContactWidgets() {
               }}
               aria-expanded={open}
               aria-controls={panelId}
-              aria-label={open ? "بستن گفتگو" : "باز کردن گفتگو"}
+              aria-label={open ? t("chat.closeChat") : t("chat.openChat")}
               className="grid size-14 place-items-center rounded-full bg-primary text-accent shadow-[0_8px_24px_-8px_oklch(0.23_0.065_264/0.55)] transition hover:brightness-110"
             >
               {open ? <X className="size-6" /> : <MessageCircle className="size-7" />}
@@ -311,15 +345,25 @@ export function ContactWidgets() {
   );
 }
 
-function ChatRateCard({ rates }: { rates: ChatRate[] }) {
+function ChatRateCard({
+  rates,
+  t,
+  n,
+  locale,
+}: {
+  rates: ChatRate[];
+  t: (key: string, vars?: Record<string, string | number>) => string;
+  n: (value: number | string, digits?: number) => string;
+  locale: "fa" | "en" | "ps";
+}) {
   return (
     <div className="mt-3 overflow-hidden rounded-xl bg-card text-card-foreground">
-      <table className="w-full text-right text-xs">
+      <table className="w-full text-start text-xs">
         <thead className="bg-secondary/80 text-muted-foreground">
           <tr>
-            <th className="px-2.5 py-2 font-semibold">ارز</th>
-            <th className="px-2.5 py-2 font-semibold">خرید</th>
-            <th className="px-2.5 py-2 font-semibold">فروش</th>
+            <th className="px-2.5 py-2 font-semibold">{t("rates.currency")}</th>
+            <th className="px-2.5 py-2 font-semibold">{t("rates.buy")}</th>
+            <th className="px-2.5 py-2 font-semibold">{t("rates.sell")}</th>
           </tr>
         </thead>
         <tbody>
@@ -327,13 +371,21 @@ function ChatRateCard({ rates }: { rates: ChatRate[] }) {
             <tr key={rate.code} className="border-t border-border">
               <td className="px-2.5 py-2 font-semibold">
                 {rate.flag ? <span className="me-1">{rate.flag}</span> : null}
-                {rate.name_fa}
+                {pickLocalized(
+                  {
+                    name_fa: rate.name_fa,
+                    name_en: (rate as { name_en?: string }).name_en,
+                    name_ps: (rate as { name_ps?: string }).name_ps,
+                  },
+                  "name",
+                  locale,
+                )}
                 <span className="ms-1 font-normal text-muted-foreground" dir="ltr">
                   {rate.code}
                 </span>
               </td>
-              <td className="px-2.5 py-2 tabular-nums text-success">{faNum(rate.buy_rate)}</td>
-              <td className="px-2.5 py-2 tabular-nums text-destructive">{faNum(rate.sell_rate)}</td>
+              <td className="px-2.5 py-2 tabular-nums text-success">{n(rate.buy_rate)}</td>
+              <td className="px-2.5 py-2 tabular-nums text-destructive">{n(rate.sell_rate)}</td>
             </tr>
           ))}
         </tbody>
@@ -342,7 +394,7 @@ function ChatRateCard({ rates }: { rates: ChatRate[] }) {
         to="/rates"
         className="block border-t border-border px-2.5 py-2 text-center text-[11px] font-semibold text-primary"
       >
-        جدول کامل نرخ لحظه‌ای
+        {t("chat.fullRatesTable")}
       </Link>
     </div>
   );

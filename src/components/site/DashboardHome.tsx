@@ -10,7 +10,7 @@ import {
   Users,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { faDate, faNum, statusLabels } from "@/lib/site";
+import { useLocale } from "@/i18n";
 import { cn } from "@/lib/utils";
 
 const transferStatuses = [
@@ -83,21 +83,23 @@ function statusClass(status: string): string {
   }
 }
 
-function greeting(now = new Date()): string {
+function greetingKey(now = new Date()): "dashboard.greetingMorning" | "dashboard.greetingAfternoon" | "dashboard.greetingEvening" {
   const hour = now.getHours();
-  if (hour < 12) return "صبح بخیر";
-  if (hour < 18) return "بعدازظهر بخیر";
-  return "عصر بخیر";
+  if (hour < 12) return "dashboard.greetingMorning";
+  if (hour < 18) return "dashboard.greetingAfternoon";
+  return "dashboard.greetingEvening";
 }
 
 function StatTile({
   card,
   loading,
   compact = false,
+  n,
 }: {
   card: StatCard;
   loading: boolean;
   compact?: boolean;
+  n: (value: number | string, digits?: number) => string;
 }) {
   return (
     <Link
@@ -125,7 +127,7 @@ function StatTile({
         {loading || card.value === undefined ? (
           <Skeleton className={compact ? "h-6 w-10" : "h-8 w-16"} />
         ) : (
-          faNum(card.value, 0)
+          n(card.value, 0)
         )}
       </p>
       {compact ? null : <p className="mt-4 text-xs text-muted-foreground">{card.hint}</p>}
@@ -148,75 +150,71 @@ export function DashboardHome({
   recent?: DashboardTransfer[];
   recentLoading: boolean;
 }) {
-  const today = new Date().toLocaleDateString("fa-IR", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  const { t, n, d } = useLocale();
+  const today = d(new Date());
 
   const overview: StatCard[] = [
     {
-      label: "کل درخواست‌ها",
+      label: t("dashboard.totalRequests"),
       value: stats?.transfers,
       to: "/dashboard/transfers",
       icon: Send,
-      hint: "همه حواله‌های ثبت‌شده",
+      hint: t("dashboard.totalRequestsHint"),
     },
     {
-      label: "ارزهای فعال",
+      label: t("dashboard.activeCurrencies"),
       value: stats?.currencies,
       to: "/dashboard/rates",
       icon: BadgeDollarSign,
-      hint: "نرخ‌های قابل معامله در سایت",
+      hint: t("dashboard.currenciesHint"),
     },
     {
-      label: "مقالات",
+      label: t("dashboard.articles"),
       value: stats?.articles,
       to: "/dashboard/blog",
       icon: Newspaper,
-      hint: "محتوای منتشرشده و پیش‌نویس",
+      hint: t("dashboard.articlesHint"),
     },
     {
-      label: "خدمات",
+      label: t("dashboard.services"),
       value: stats?.services,
       to: "/dashboard/services",
       icon: Sparkles,
-      hint: "خدمات نمایش‌داده‌شده در سایت",
+      hint: t("dashboard.servicesHint"),
       adminOnly: true,
     },
     {
-      label: "نمایندگی‌ها",
+      label: t("dashboard.branches"),
       value: stats?.branches,
       to: "/dashboard/branches",
       icon: MapPin,
-      hint: "دفاتر و شبکه نمایندگی",
+      hint: t("dashboard.branchesHint"),
       adminOnly: true,
     },
-  ].filter((card) => isAdmin || !card.adminOnly);
+  ].filter((card): card is StatCard => isAdmin || !card.adminOnly);
 
   return (
     <div className="space-y-8">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-sm font-semibold text-accent">{greeting()}</p>
+          <p className="text-sm font-semibold text-accent">{t(greetingKey())}</p>
           <h1 className="mt-1 text-2xl font-extrabold tracking-tight">{displayName}</h1>
-          <p className="mt-2 max-w-xl text-sm leading-7 text-muted-foreground">
-            وضعیت حواله‌ها، نرخ‌ها و محتوای سایت را از اینجا دنبال کنید.
-          </p>
+          <p className="mt-2 max-w-xl text-sm leading-7 text-muted-foreground">{t("dashboard.subtitle")}</p>
         </div>
         <div className="rounded-xl bg-secondary px-4 py-3 text-sm">
-          <p className="text-xs text-muted-foreground">امروز</p>
+          <p className="text-xs text-muted-foreground">{t("dashboard.today")}</p>
           <p className="mt-0.5 font-semibold">{today}</p>
-          <p className="mt-1 text-xs text-muted-foreground">{isAdmin ? "مدیر سیستم" : "کارشناس"}</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {isAdmin ? t("dashboard.roleAdmin") : t("dashboard.roleStaff")}
+          </p>
         </div>
       </header>
 
-      <section aria-label="نمای کلی">
-        <h2 className="mb-3 text-base font-bold">نمای کلی</h2>
+      <section aria-label={t("dashboard.overviewShort")}>
+        <h2 className="mb-3 text-base font-bold">{t("dashboard.overviewShort")}</h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           {overview.map((card) => (
-            <StatTile key={card.label} card={card} loading={statsLoading} compact />
+            <StatTile key={card.label} card={card} loading={statsLoading} compact n={n} />
           ))}
         </div>
       </section>
@@ -224,14 +222,14 @@ export function DashboardHome({
       <section className="overflow-hidden card-elevated">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
           <div>
-            <h2 className="text-base font-bold">آخرین درخواست‌های حواله</h2>
-            <p className="mt-1 text-xs text-muted-foreground">پنج درخواست تازه‌تر</p>
+            <h2 className="text-base font-bold">{t("dashboard.recentTransfers")}</h2>
+            <p className="mt-1 text-xs text-muted-foreground">{t("dashboard.recentTransfersHint")}</p>
           </div>
           <Link
             to="/dashboard/transfers"
             className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-primary"
           >
-            همه درخواست‌ها <ArrowLeft className="size-4" />
+            {t("dashboard.allRequests")} <ArrowLeft className="size-4" />
           </Link>
         </div>
 
@@ -254,17 +252,17 @@ export function DashboardHome({
                       {row.reference}
                     </p>
                     <p className="mt-1 text-sm font-bold">
-                      {faNum(row.amount)} <span dir="ltr">{row.from_currency}</span>
+                      {n(row.amount)} <span dir="ltr">{row.from_currency}</span>
                       <span className="mx-1 text-muted-foreground">→</span>
                       <span dir="ltr">{row.to_currency}</span>
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <time className="text-xs text-muted-foreground" dateTime={row.created_at}>
-                      {faDate(row.created_at)}
+                      {d(row.created_at)}
                     </time>
                     <span className={cn("rounded-full px-3 py-1 text-xs font-semibold", statusClass(row.status))}>
-                      {statusLabels[row.status] ?? row.status}
+                      {t(`status.${row.status}`)}
                     </span>
                   </div>
                 </Link>
@@ -273,26 +271,26 @@ export function DashboardHome({
           </ul>
         ) : (
           <div className="px-5 py-10 text-center">
-            <p className="text-sm font-semibold">درخواستی ثبت نشده است</p>
-            <p className="mt-1 text-sm text-muted-foreground">حواله‌های جدید مشتریان اینجا دیده می‌شوند.</p>
+            <p className="text-sm font-semibold">{t("dashboard.emptyTransfers")}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{t("dashboard.emptyTransfersHint")}</p>
           </div>
         )}
       </section>
 
       <section>
-        <h2 className="mb-3 text-base font-bold">دسترسی سریع</h2>
+        <h2 className="mb-3 text-base font-bold">{t("dashboard.quickAccess")}</h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Link
             to="/dashboard/transfers"
             className="inline-flex min-h-12 items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 text-sm font-semibold hover:bg-muted/60"
           >
-            درخواست‌های حواله <Send className="size-4 text-accent" />
+            {t("dashboard.transferRequests")} <Send className="size-4 text-accent" />
           </Link>
           <Link
             to="/dashboard/rates"
             className="inline-flex min-h-12 items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 text-sm font-semibold hover:bg-muted/60"
           >
-            بروزرسانی نرخ‌ها <BadgeDollarSign className="size-4 text-accent" />
+            {t("dashboard.updateRates")} <BadgeDollarSign className="size-4 text-accent" />
           </Link>
           {isAdmin ? (
             <>
@@ -300,13 +298,13 @@ export function DashboardHome({
                 to="/dashboard/pages"
                 className="inline-flex min-h-12 items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 text-sm font-semibold hover:bg-muted/60"
               >
-                ویرایش صفحات <FileText className="size-4 text-accent" />
+                {t("dashboard.editPages")} <FileText className="size-4 text-accent" />
               </Link>
               <Link
                 to="/dashboard/users"
                 className="inline-flex min-h-12 items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 text-sm font-semibold hover:bg-muted/60"
               >
-                کاربران و نقش‌ها <Users className="size-4 text-accent" />
+                {t("dashboard.manageUsers")} <Users className="size-4 text-accent" />
               </Link>
             </>
           ) : (
@@ -314,7 +312,7 @@ export function DashboardHome({
               to="/dashboard/blog"
               className="inline-flex min-h-12 items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 text-sm font-semibold hover:bg-muted/60"
             >
-              مدیریت وبلاگ <Newspaper className="size-4 text-accent" />
+              {t("dashboard.manageBlog")} <Newspaper className="size-4 text-accent" />
             </Link>
           )}
         </div>

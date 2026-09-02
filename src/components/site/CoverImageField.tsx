@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { ImageIcon, X } from "lucide-react";
 import { toast } from "sonner";
+import { useLocale } from "@/i18n";
 import { uploadArticleImage } from "@/lib/portal.functions";
 import { errorClass, labelClass } from "@/lib/forms";
 import { cn } from "@/lib/utils";
@@ -20,6 +21,7 @@ type CoverImageFieldProps = {
 };
 
 export function CoverImageField({ label, value, onChange, error }: CoverImageFieldProps) {
+  const { t } = useLocale();
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const uploadGeneration = useRef(0);
@@ -51,11 +53,11 @@ export function CoverImageField({ label, value, onChange, error }: CoverImageFie
 
   async function assignFile(file: File) {
     if (!isCoverImageFile(file)) {
-      toast.error("یک فایل تصویر انتخاب کنید.");
+      toast.error(t("media.selectImage"));
       return;
     }
     if (file.size > MAX_IMAGE_BYTES) {
-      toast.error("حجم تصویر باید حداکثر ۵ مگابایت باشد.");
+      toast.error(t("media.maxSize"));
       return;
     }
 
@@ -72,7 +74,7 @@ export function CoverImageField({ label, value, onChange, error }: CoverImageFie
     setUploading(false);
 
     if (!result.ok || !result.data?.url) {
-      toast.error(result.message ?? "بارگذاری تصویر ممکن نشد");
+      toast.error(!result.ok ? result.message : t("media.uploadFailed"));
       URL.revokeObjectURL(objectUrl);
       setLocalPreview(null);
       setFileName("");
@@ -166,7 +168,7 @@ export function CoverImageField({ label, value, onChange, error }: CoverImageFie
               <button
                 type="button"
                 className="absolute -top-2 -end-2 rounded-full bg-destructive p-1.5 text-destructive-foreground shadow-md transition hover:bg-destructive/90"
-                aria-label="حذف تصویر شاخص"
+                aria-label={t("media.removeCoverAria")}
                 onClick={(event) => {
                   event.stopPropagation();
                   clearImage();
@@ -179,7 +181,7 @@ export function CoverImageField({ label, value, onChange, error }: CoverImageFie
               <p className="text-center text-xs font-medium text-foreground">{fileName}</p>
             ) : null}
             {uploading ? (
-              <p className="text-xs text-muted-foreground">در حال بارگذاری…</p>
+              <p className="text-xs text-muted-foreground">{t("media.uploading")}</p>
             ) : null}
           </div>
         ) : (
@@ -188,9 +190,9 @@ export function CoverImageField({ label, value, onChange, error }: CoverImageFie
               <ImageIcon className="h-5 w-5 text-primary" aria-hidden="true" />
             </div>
             <p className="mb-0.5 text-xs font-semibold text-foreground">
-              برای بارگذاری کلیک کنید یا تصویر را اینجا بکشید
+              {t("media.dropzoneTitle")}
             </p>
-            <p className="text-[11px] text-muted-foreground">PNG، JPEG، WebP · حداکثر ۵ مگابایت</p>
+            <p className="text-[11px] text-muted-foreground">{t("media.dropzoneHint")}</p>
           </div>
         )}
       </div>

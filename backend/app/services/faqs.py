@@ -28,6 +28,13 @@ def _clean_keywords(value: str | None) -> str | None:
     return cleaned[:300] or None
 
 
+def _optional_text(value: str | None, max_len: int) -> str | None:
+    if value is None:
+        return None
+    cleaned = html_to_text(value)
+    return cleaned[:max_len] or None
+
+
 def create_faq(db: Session, payload: FaqCreate) -> dict:
     question = html_to_text(payload.question)
     answer = html_to_text(payload.answer)
@@ -41,7 +48,11 @@ def create_faq(db: Session, payload: FaqCreate) -> dict:
 
     row = Faq(
         question=question[:200],
+        question_en=_optional_text(payload.question_en, 200),
+        question_ps=_optional_text(payload.question_ps, 200),
         answer=answer[:2000],
+        answer_en=_optional_text(payload.answer_en, 2000),
+        answer_ps=_optional_text(payload.answer_ps, 2000),
         keywords=_clean_keywords(payload.keywords),
         sort_order=payload.sort_order,
         is_active=payload.is_active,
@@ -67,6 +78,14 @@ def update_faq(db: Session, faq_id: uuid.UUID, payload: FaqUpdate) -> dict:
         if len(answer) < 3:
             return fail_result("اطلاعات فرم را بررسی کنید", {"answer": "پاسخ را وارد کنید"})
         data["answer"] = answer[:2000]
+    for field, max_len in (
+        ("question_en", 200),
+        ("question_ps", 200),
+        ("answer_en", 2000),
+        ("answer_ps", 2000),
+    ):
+        if field in data:
+            data[field] = _optional_text(data[field], max_len)
     if "keywords" in data:
         data["keywords"] = _clean_keywords(data["keywords"])
 

@@ -16,18 +16,19 @@ import {
   Trash2,
 } from "lucide-react";
 import { ConfirmDeleteDialog } from "@/components/site/ConfirmDeleteDialog";
+import { useLocale } from "@/i18n";
 import { useRoles } from "@/hooks/use-session";
 import { AppSelect, SelectField, TextAreaField, TextField } from "@/components/site/Field";
 import { fieldClass, labelClass } from "@/lib/forms";
 import { deleteService, listAdminServices, saveService } from "@/lib/portal.functions";
-import { getServiceIcon, getServiceIconLabel, serviceIconOptions } from "@/lib/service-icons";
+import { getServiceIcon, getServiceIconLabel, getServiceIconOptions } from "@/lib/service-icons";
 import { fieldErrorMap, serviceSchema, uniqueSlug } from "@/lib/validation";
-import { faNum, site } from "@/lib/site";
+import { site } from "@/lib/site";
 
 export const Route = createFileRoute("/_authenticated/dashboard/services")({
   head: () => ({
     meta: [
-      { title: `مدیریت خدمات | ${site.name}` },
+      { title: `Services | ${site.name}` },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -57,29 +58,30 @@ const emptyForm: FormState = {
 
 const pageSizes = [5, 10, 25, 50, 100];
 
-const sortLabels: Record<SortKey, string> = {
-  title_fa: "خدمت",
-  icon: "آیکون",
-  sort_order: "ترتیب",
-  is_active: "وضعیت",
-};
-
-const statusLabels: Record<Exclude<StatusFilter, "all">, string> = {
-  active: "نمایش عمومی",
-  inactive: "غیرفعال",
-};
-
 function ServiceIconLabel({ name }: { name: string }) {
+  const { t } = useLocale();
   const Icon = getServiceIcon(name);
   return (
     <span className="inline-flex items-center gap-2">
       <Icon className="size-4 shrink-0" />
-      <span>{getServiceIconLabel(name)}</span>
+      <span>{getServiceIconLabel(name, t)}</span>
     </span>
   );
 }
 
 function ServicesManagePage() {
+  const { t, n, d } = useLocale();
+  const sortLabels: Record<SortKey, string> = {
+    title_fa: t("admin.sortService"),
+    icon: t("admin.sortIcon"),
+    sort_order: t("admin.sortOrder"),
+    is_active: t("common.status"),
+  };
+  const statusLabels: Record<Exclude<StatusFilter, "all">, string> = {
+    active: t("admin.publicVisible"),
+    inactive: t("admin.inactive"),
+  };
+
   const { isAdmin } = useRoles();
   const queryClient = useQueryClient();
   const [form, setForm] = useState<FormState>(emptyForm);
@@ -125,7 +127,7 @@ function ServicesManagePage() {
       const parsed = serviceSchema.safeParse(payload);
       if (!parsed.success) {
         setErrors(fieldErrorMap(parsed.error));
-        throw new Error("اطلاعات وارد شده کامل نیست");
+        throw new Error(t("admin.formIncomplete"));
       }
       setErrors({});
       return saveService({ data: payload });
@@ -136,7 +138,7 @@ function ServicesManagePage() {
         toast.error(result.message);
         return;
       }
-      toast.success(form.id ? "خدمت ویرایش شد" : "خدمت جدید ثبت شد");
+      toast.success(form.id ? t("admin.servicesSaved") : t("admin.servicesCreated"));
       setForm(emptyForm);
       invalidate();
     },
@@ -150,11 +152,11 @@ function ServicesManagePage() {
         toast.error(result.message);
         return;
       }
-      toast.success("خدمت حذف شد");
+      toast.success(t("admin.servicesDeleted"));
       setForm((prev) => (prev.id ? emptyForm : prev));
       invalidate();
     },
-    onError: () => toast.error("حذف خدمت ممکن نشد"),
+    onError: () => toast.error(t("admin.servicesDeleteFailed")),
   });
 
   const counts = useMemo(() => {
@@ -222,10 +224,10 @@ function ServicesManagePage() {
 
   function exportCsv() {
     if (filtered.length === 0) {
-      toast.error("داده‌ای برای خروجی وجود ندارد");
+      toast.error(t("admin.noDataExport"));
       return;
     }
-    const header = ["عنوان", "نشانی", "آیکون", "ترتیب", "وضعیت", "توضیح"];
+    const header = [t("admin.titleLabel"), t("admin.slugLabel"), t("admin.descLabel"), t("admin.serviceIconLabel"), t("admin.serviceOrderLabel"), t("common.status")];
     const cell = (value: string) => `"${value.replace(/"/g, '""')}"`;
     const lines = [
       header.map(cell).join(","),
@@ -249,34 +251,31 @@ function ServicesManagePage() {
     link.download = `sarafi-services-${new Date().toISOString().slice(0, 10)}.csv`;
     link.click();
     URL.revokeObjectURL(url);
-    toast.success(`خروجی CSV برای ${faNum(filtered.length, 0)} خدمت آماده شد`);
+    toast.success(t("admin.servicesCsvReady", { count: n(filtered.length, 0) }));
   }
 
   if (!isAdmin) {
     return (
       <div className="p-6 card-elevated">
-        <h1 className="text-lg font-bold">دسترسی محدود</h1>
+        <h1 className="text-lg font-bold">{t("admin.accessDeniedTitle")}</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          مدیریت خدمات تنها برای مدیر سیستم مجاز است.
+          {t("admin.servicesAccess")}
         </p>
       </div>
     );
   }
 
   const stats = [
-    { label: "کل خدمات", value: counts.total, icon: Sparkles },
-    { label: "نمایش عمومی", value: counts.active, icon: Eye },
-    { label: "غیرفعال", value: counts.inactive, icon: EyeOff },
+    { label: t("admin.servicesTotal"), value: counts.total, icon: Sparkles },
+    { label: t("admin.publicVisible"), value: counts.active, icon: Eye },
+    { label: t("admin.inactive"), value: counts.inactive, icon: EyeOff },
   ];
 
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-2xl font-extrabold">مدیریت خدمات</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          جست‌وجو کنید، فیلتر بزنید و خدمات را اضافه، ویرایش یا حذف کنید؛ تغییرات در صفحه خدمات و
-          صفحه اصلی سایت نمایش داده می‌شود.
-        </p>
+        <h1 className="text-2xl font-extrabold">{t("admin.servicesTitle")}</h1>
+        <p className="mt-2 text-sm text-muted-foreground">{t("admin.servicesSubtitle")}</p>
       </header>
 
       <div className="grid gap-3 sm:grid-cols-3">
@@ -287,7 +286,7 @@ function ServicesManagePage() {
             </span>
             <div>
               <p className="text-xs text-muted-foreground">{stat.label}</p>
-              <p className="text-lg font-extrabold">{faNum(stat.value, 0)}</p>
+              <p className="text-lg font-extrabold">{n(stat.value, 0)}</p>
             </div>
           </div>
         ))}
@@ -298,7 +297,7 @@ function ServicesManagePage() {
           <div className="grid gap-4 p-5 card-elevated lg:grid-cols-[1fr_13rem_11rem_auto] lg:items-end">
             <div>
               <label className={labelClass} htmlFor="service-search">
-                جست‌وجوی خدمت
+                {t("admin.servicesSearch")}
               </label>
               <div className="relative mt-2">
                 <Search className="pointer-events-none absolute end-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -306,7 +305,7 @@ function ServicesManagePage() {
                   id="service-search"
                   dir="rtl"
                   className={`${fieldClass} pe-10`}
-                  placeholder="عنوان، نشانی، توضیح یا آیکون"
+                  placeholder={t("admin.servicesSearchPh")}
                   value={search}
                   onChange={(e) => {
                     setSearch(e.target.value);
@@ -317,14 +316,14 @@ function ServicesManagePage() {
             </div>
             <div>
               <label className={labelClass} htmlFor="service-status-filter">
-                فیلتر وضعیت
+                {t("admin.statusFilter")}
               </label>
               <div className="mt-2">
                 <AppSelect
                   id="service-status-filter"
                   value={statusFilter}
                   options={[
-                    { value: "all", label: "همه وضعیت‌ها" },
+                    { value: "all", label: t("admin.allStatuses") },
                     { value: "active", label: statusLabels.active },
                     { value: "inactive", label: statusLabels.inactive },
                   ]}
@@ -337,7 +336,7 @@ function ServicesManagePage() {
             </div>
             <div>
               <label className={labelClass} htmlFor="service-page-size">
-                تعداد در هر صفحه
+                {t("admin.pageSize")}
               </label>
               <div className="mt-2">
                 <AppSelect
@@ -345,7 +344,7 @@ function ServicesManagePage() {
                   value={String(pageSize)}
                   options={pageSizes.map((size) => ({
                     value: String(size),
-                    label: `${faNum(size, 0)} ردیف`,
+                    label: `${t("admin.rows", { count: n(size, 0) })}`,
                   }))}
                   onValueChange={(value) => {
                     setPageSize(Number(value));
@@ -359,13 +358,12 @@ function ServicesManagePage() {
               onClick={exportCsv}
               className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-bold text-primary-foreground"
             >
-              <Download className="size-4" /> خروجی CSV
+              <Download className="size-4" /> {t("admin.exportCsv")}
             </button>
           </div>
 
           <p className="text-xs text-muted-foreground">
-            نمایش {faNum(paginated.length, 0)} خدمت از {faNum(filtered.length, 0)} نتیجه — صفحه{" "}
-            {faNum(currentPage, 0)} از {faNum(totalPages, 0)}
+            {t("admin.servicesShowing", { shown: n(paginated.length, 0), total: n(filtered.length, 0), page: n(currentPage, 0), pages: n(totalPages, 0) })}
           </p>
 
           <div className="overflow-x-auto card-elevated">
@@ -379,7 +377,7 @@ function ServicesManagePage() {
                           type="button"
                           onClick={() => toggleSort(key)}
                           className="inline-flex items-center gap-1 font-semibold hover:text-primary"
-                          aria-label={`مرتب‌سازی بر اساس ${sortLabels[key]}`}
+                          aria-label={t("admin.sortBy", { label: sortLabels[key] })}
                         >
                           {sortLabels[key]}
                           <ArrowUpDown
@@ -387,21 +385,21 @@ function ServicesManagePage() {
                           />
                           {sortKey === key && (
                             <span className="text-[10px] text-muted-foreground">
-                              {sortDir === "asc" ? "صعودی" : "نزولی"}
+                              {sortDir === "asc" ? t("admin.asc") : t("admin.desc")}
                             </span>
                           )}
                         </button>
                       </th>
                     ),
                   )}
-                  <th className="px-4 py-3 font-semibold">عملیات</th>
+                  <th className="px-4 py-3 font-semibold">{t("common.actions")}</th>
                 </tr>
               </thead>
               <tbody>
                 {!services.isLoading && filtered.length === 0 && (
                   <tr>
                     <td className="px-4 py-10 text-center text-muted-foreground" colSpan={columnCount}>
-                      خدمتی با این مشخصات یافت نشد.
+                      {t("admin.servicesEmpty")}
                     </td>
                   </tr>
                 )}
@@ -416,7 +414,7 @@ function ServicesManagePage() {
                         <span className="font-semibold">{service.title_fa}</span>
                         {form.id === service.id && (
                           <span className="ms-2 rounded-full bg-accent/20 px-2 py-0.5 text-[10px] font-bold text-accent-foreground">
-                            در حال ویرایش
+                            {t("admin.editing")}
                           </span>
                         )}
                         <span className="mt-0.5 block line-clamp-1 text-[11px] text-muted-foreground">
@@ -426,7 +424,7 @@ function ServicesManagePage() {
                       <td className="px-4 py-3">
                         <ServiceIconLabel name={service.icon} />
                       </td>
-                      <td className="px-4 py-3 tabular-nums">{faNum(service.sort_order, 0)}</td>
+                      <td className="px-4 py-3 tabular-nums">{n(service.sort_order, 0)}</td>
                       <td className="px-4 py-3">
                         <span
                           className={`rounded-full border px-2.5 py-1 text-xs font-bold ${
@@ -445,7 +443,7 @@ function ServicesManagePage() {
                             onClick={() => startEdit(service)}
                             className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold"
                           >
-                            <Pencil className="size-3.5" /> ویرایش
+                            <Pencil className="size-3.5" /> {t("common.edit")}
                           </button>
                           <button
                             type="button"
@@ -453,7 +451,7 @@ function ServicesManagePage() {
                             onClick={() => setPendingDelete(service)}
                             className="inline-flex items-center gap-1.5 rounded-lg border border-destructive/40 px-3 py-1.5 text-xs font-semibold text-destructive disabled:opacity-60"
                           >
-                            <Trash2 className="size-3.5" /> حذف
+                            <Trash2 className="size-3.5" /> {t("common.delete")}
                           </button>
                         </div>
                       </td>
@@ -466,7 +464,7 @@ function ServicesManagePage() {
 
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-xs text-muted-foreground">
-              صفحه {faNum(currentPage, 0)} از {faNum(totalPages, 0)}
+              {t("admin.pageOf", { page: n(currentPage, 0), pages: n(totalPages, 0) })}
             </p>
             <div className="flex items-center gap-2">
               <button
@@ -475,7 +473,7 @@ function ServicesManagePage() {
                 disabled={currentPage <= 1}
                 className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-2 text-xs font-semibold disabled:opacity-40"
               >
-                <ChevronRight className="size-3.5" /> قبلی
+                <ChevronRight className="size-3.5" /> {t("common.previous")}
               </button>
               <button
                 type="button"
@@ -483,7 +481,7 @@ function ServicesManagePage() {
                 disabled={currentPage >= totalPages}
                 className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-2 text-xs font-semibold disabled:opacity-40"
               >
-                بعدی <ChevronLeft className="size-3.5" />
+                {t("common.next")} <ChevronLeft className="size-3.5" />
               </button>
             </div>
           </div>
@@ -496,24 +494,24 @@ function ServicesManagePage() {
           }}
           className="h-fit space-y-4 p-5 card-elevated"
         >
-          <h2 className="text-base font-bold">{form.id ? "ویرایش خدمت" : "افزودن خدمت"}</h2>
+          <h2 className="text-base font-bold">{form.id ? t("admin.servicesEdit") : t("admin.servicesAdd")}</h2>
           <TextField
-            label="عنوان خدمت"
+            label={t("admin.serviceTitleLabel")}
             value={form.title_fa}
             error={errors["title_fa"]}
             onChange={(e) => setForm((prev) => ({ ...prev, title_fa: e.target.value }))}
-            placeholder="حواله یوان به چین"
+            placeholder=""
           />
           <TextAreaField
-            label="توضیح کوتاه"
+            label={t("admin.serviceDescLabel")}
             value={form.summary_fa}
             error={errors["summary_fa"]}
             onChange={(e) => setForm((p) => ({ ...p, summary_fa: e.target.value }))}
           />
           <SelectField
-            label="آیکون"
+            label={t("admin.serviceIconLabel")}
             value={form.icon}
-            options={serviceIconOptions}
+            options={getServiceIconOptions(t)}
             error={errors["icon"]}
             onValueChange={(icon) => setForm((p) => ({ ...p, icon }))}
           />
@@ -524,7 +522,7 @@ function ServicesManagePage() {
               onChange={(e) => setForm((p) => ({ ...p, is_active: e.target.checked }))}
               className="size-4 accent-primary"
             />
-            نمایش در سایت عمومی
+            {t("admin.showOnSite")}
           </label>
           <div className="flex flex-wrap gap-2 pt-1">
             <button
@@ -533,7 +531,7 @@ function ServicesManagePage() {
               className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground disabled:opacity-60"
             >
               <Plus className="size-4" />
-              {save.isPending ? "در حال ذخیره…" : form.id ? "ذخیره تغییرات" : "ثبت خدمت"}
+              {save.isPending ? t("admin.saving") : form.id ? t("admin.saveChanges") : t("admin.registerService")}
             </button>
             {form.id && (
               <button
@@ -544,7 +542,7 @@ function ServicesManagePage() {
                 }}
                 className="rounded-lg border border-border px-4 py-2.5 text-sm font-semibold"
               >
-                لغو ویرایش
+                {t("admin.cancelEdit")}
               </button>
             )}
           </div>
@@ -553,9 +551,9 @@ function ServicesManagePage() {
 
       <ConfirmDeleteDialog
         open={Boolean(pendingDelete)}
-        title="حذف خدمت"
+        title={t("admin.servicesDeleteTitle")}
         itemName={pendingDelete?.title_fa}
-        description="این خدمت از صفحه عمومی سایت برداشته می‌شود و دیگر قابل بازیابی نیست."
+        description={t("admin.servicesDeleteDesc")}
         pending={remove.isPending}
         onOpenChange={(open) => !open && setPendingDelete(null)}
         onConfirm={() => {

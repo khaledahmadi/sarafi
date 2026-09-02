@@ -8,6 +8,8 @@ class SiteSettingOut(ORMModel):
     group_key: str
     label_fa: str
     value: str
+    value_en: str | None = None
+    value_ps: str | None = None
     input_kind: str
     hint_fa: str | None = None
     sort_order: int
@@ -16,6 +18,8 @@ class SiteSettingOut(ORMModel):
 class SettingValueItem(BaseModel):
     key: str = Field(min_length=1, max_length=80)
     value: str = Field(max_length=8000)
+    value_en: str | None = Field(default=None, max_length=8000)
+    value_ps: str | None = Field(default=None, max_length=8000)
 
 
 class SettingsBulkUpdate(BaseModel):

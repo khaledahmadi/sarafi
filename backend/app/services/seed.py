@@ -23,16 +23,26 @@ from app.models.site_setting import SiteSetting
 from app.models.user import AppRole, User, UserRole
 
 CURRENCIES = [
-    ("USD", "دالر آمریکا", "🇺🇸", Decimal("65.63"), Decimal("65.77"), 1),
-    ("EUR", "یورو", "🇪🇺", Decimal("76.10"), Decimal("76.42"), 2),
-    ("IRR", "تومان ایران", "🇮🇷", Decimal("338.87"), Decimal("342.33"), 3),
-    ("CNY", "یوان چین", "🇨🇳", Decimal("9.12"), Decimal("9.24"), 4),
-    ("AED", "درهم امارات", "🇦🇪", Decimal("17.86"), Decimal("17.95"), 5),
-    ("GBP", "پوند انگلیس", "🇬🇧", Decimal("88.40"), Decimal("88.90"), 6),
-    ("TRY", "لیر ترکیه", "🇹🇷", Decimal("1.62"), Decimal("1.68"), 7),
-    ("PKR", "روپیه پاکستان", "🇵🇰", Decimal("0.23"), Decimal("0.25"), 8),
-    ("SEK", "کرون سویدن", "🇸🇪", Decimal("6.76"), Decimal("6.90"), 9),
-    ("AUD", "دالر استرالیا", "🇦🇺", Decimal("46.16"), Decimal("46.25"), 10),
+    ("USD", "دالر آمریکا", "🇺🇸", Decimal("64.60"), Decimal("64.65"), 1),
+    ("EUR", "یورو", "🇪🇺", Decimal("73.80"), Decimal("74.00"), 2),
+    ("GBP", "پوند انگلیس", "🇬🇧", Decimal("85.20"), Decimal("85.50"), 3),
+    ("IRR", "ریال ایران (۱هزار)", "🇮🇷", Decimal("0.30"), Decimal("0.31"), 4),
+    ("PKR", "روپیه پاکستان (۱هزار)", "🇵🇰", Decimal("224"), Decimal("225"), 5),
+    ("SAR", "ریال سعودی", "🇸🇦", Decimal("17.12"), Decimal("17.13"), 6),
+    ("AED", "درهم امارات", "🇦🇪", Decimal("17.59"), Decimal("17.60"), 7),
+    ("CHF", "فرانک سوئیس", "🇨🇭", Decimal("79.77"), Decimal("79.83"), 8),
+    ("AUD", "دالر استرالیا", "🇦🇺", Decimal("46.16"), Decimal("46.20"), 9),
+    ("CAD", "دالر کانادا", "🇨🇦", Decimal("46.56"), Decimal("46.60"), 10),
+    ("RUB", "روبل روسیه", "🇷🇺", Decimal("0.74"), Decimal("0.75"), 11),
+    ("DKK", "کرون دانمارک", "🇩🇰", Decimal("10.02"), Decimal("10.03"), 12),
+    ("SEK", "کرون سویدن", "🇸🇪", Decimal("6.74"), Decimal("6.75"), 13),
+    ("NOK", "کرون نروژ", "🇳🇴", Decimal("6.92"), Decimal("6.93"), 14),
+    ("TRY", "لیر ترکیه", "🇹🇷", Decimal("1.34"), Decimal("1.34"), 15),
+    ("CNY", "یوان چین", "🇨🇳", Decimal("9.61"), Decimal("9.62"), 16),
+    ("KWD", "دینار کویت", "🇰🇼", Decimal("209"), Decimal("209"), 17),
+    ("QAR", "ریال قطر", "🇶🇦", Decimal("17.69"), Decimal("17.70"), 18),
+    ("BHD", "دینار بحرین", "🇧🇭", Decimal("171"), Decimal("172"), 19),
+    ("JPY", "ین ژاپن (۱هزار)", "🇯🇵", Decimal("404"), Decimal("404"), 20),
 ]
 
 SERVICES = [
@@ -454,11 +464,17 @@ SITE_SETTINGS: list[tuple[str, str, str, str, str, str | None, int]] = [
 def _seed_currencies(db: Session) -> int:
     created = 0
     for code, name_fa, flag, buy, sell, sort_order in CURRENCIES:
-        exists = db.scalar(select(Currency.id).where(Currency.code == code))
+        exists = db.scalar(
+            select(Currency.id).where(
+                Currency.code == code,
+                Currency.rate_source == "sarai_shahzada",
+            )
+        )
         if exists:
             continue
         db.add(
             Currency(
+                rate_source="sarai_shahzada",
                 code=code,
                 name_fa=name_fa,
                 flag=flag,

@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { Bookmark } from "lucide-react";
 import { ArticleBookmarkMeta, type BlogArticle } from "@/components/site/ArticleCard";
-import { faDate } from "@/lib/site";
+import { pickLocalized, useLocale } from "@/i18n";
 
 export function ArticleSectionHeading({ children }: { children: string }) {
   return (
@@ -13,6 +13,9 @@ export function ArticleSectionHeading({ children }: { children: string }) {
 }
 
 export function ArticleHero({ article }: { article: BlogArticle }) {
+  const { locale, d } = useLocale();
+  const title = pickLocalized(article as BlogArticle & { title_en?: string; title_ps?: string }, "title", locale);
+  const excerpt = pickLocalized(article as BlogArticle & { excerpt_en?: string; excerpt_ps?: string }, "excerpt", locale);
   return (
     <article className="overflow-hidden rounded-2xl border border-border bg-card shadow-[0_2px_16px_rgba(0,0,0,0.06)]">
       <Link
@@ -24,11 +27,11 @@ export function ArticleHero({ article }: { article: BlogArticle }) {
         <div className="flex flex-col justify-between p-5 sm:p-6 lg:p-7" dir="rtl">
           <div>
             <h2 className="text-2xl font-semibold leading-[1.15] tracking-tight sm:text-3xl md:text-[2.125rem] md:leading-[1.12] lg:text-4xl">
-              {article.title_fa}
+              {title}
             </h2>
-            {article.excerpt_fa ? (
+            {excerpt ? (
               <p className="mt-4 line-clamp-5 text-base leading-relaxed text-muted-foreground">
-                {article.excerpt_fa}
+                {excerpt}
               </p>
             ) : null}
           </div>
@@ -37,7 +40,7 @@ export function ArticleHero({ article }: { article: BlogArticle }) {
               <Bookmark className="h-5 w-5" strokeWidth={1.5} />
             </span>
             <time className="text-sm text-muted-foreground" dateTime={article.published_at} dir="rtl">
-              {faDate(article.published_at)}
+              {d(article.published_at)}
             </time>
           </div>
         </div>
@@ -56,13 +59,14 @@ export function ArticleHero({ article }: { article: BlogArticle }) {
 }
 
 export function ArticleLatestRail({ articles }: { articles: BlogArticle[] }) {
+  const { locale, t, d } = useLocale();
   if (articles.length === 0) return null;
 
   return (
     <div className="h-full overflow-hidden rounded-2xl border border-border bg-card shadow-[0_2px_16px_rgba(0,0,0,0.06)]">
       <div className="px-5 pt-4 sm:pt-5">
         <div className="mb-3 border-b border-dashed border-border pb-3">
-          <h2 className="text-base font-semibold leading-tight tracking-tight sm:text-lg">تازه‌ترین</h2>
+          <h2 className="text-base font-semibold leading-tight tracking-tight sm:text-lg">{t("articles.latest")}</h2>
         </div>
       </div>
       <ul className="divide-y divide-border">
@@ -80,10 +84,10 @@ export function ArticleLatestRail({ articles }: { articles: BlogArticle[] }) {
               </div>
               <div className="min-w-0 flex-1">
                 <span className="text-sm font-semibold leading-snug text-foreground transition group-hover:text-primary sm:text-base">
-                  {item.title_fa}
+                  {pickLocalized(item as BlogArticle & { title_en?: string; title_ps?: string }, "title", locale)}
                 </span>
                 <time className="mt-1 block text-xs text-muted-foreground" dateTime={item.published_at}>
-                  {faDate(item.published_at)}
+                  {d(item.published_at)}
                 </time>
               </div>
             </Link>
@@ -95,12 +99,24 @@ export function ArticleLatestRail({ articles }: { articles: BlogArticle[] }) {
 }
 
 export function ArticleFourUp({ articles }: { articles: BlogArticle[] }) {
+  const { locale } = useLocale();
   if (articles.length === 0) return null;
 
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
       <div className="grid grid-cols-1 divide-y divide-border lg:grid-cols-4 lg:divide-x lg:divide-y-0 lg:divide-x-reverse">
-        {articles.map((item) => (
+        {articles.map((item) => {
+          const title = pickLocalized(
+            item as BlogArticle & { title_en?: string; title_ps?: string },
+            "title",
+            locale,
+          );
+          const excerpt = pickLocalized(
+            item as BlogArticle & { excerpt_en?: string; excerpt_ps?: string },
+            "excerpt",
+            locale,
+          );
+          return (
           <Link
             key={item.slug}
             to="/articles/$slug"
@@ -118,15 +134,16 @@ export function ArticleFourUp({ articles }: { articles: BlogArticle[] }) {
             </div>
             <div className="flex min-h-0 flex-1 flex-col pt-4">
               <h3 className="text-base font-semibold leading-snug text-foreground transition group-hover:text-primary">
-                {item.title_fa}
+                {title}
               </h3>
-              {item.excerpt_fa ? (
-                <p className="mt-2 line-clamp-4 text-sm leading-relaxed text-muted-foreground">{item.excerpt_fa}</p>
+              {excerpt ? (
+                <p className="mt-2 line-clamp-4 text-sm leading-relaxed text-muted-foreground">{excerpt}</p>
               ) : null}
             </div>
             <ArticleBookmarkMeta publishedAt={item.published_at} />
           </Link>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

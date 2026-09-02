@@ -6,14 +6,18 @@ from sqlalchemy import Boolean, DateTime, Integer, Numeric, String, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
+from app.core.rate_sources import DEFAULT_RATE_SOURCE
 
 
 class Currency(Base):
     __tablename__ = "currencies"
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    code: Mapped[str] = mapped_column(String(8), unique=True, nullable=False, index=True)
+    rate_source: Mapped[str] = mapped_column(String(32), nullable=False, default=DEFAULT_RATE_SOURCE, index=True)
+    code: Mapped[str] = mapped_column(String(8), nullable=False, index=True)
     name_fa: Mapped[str] = mapped_column(String(80), nullable=False)
+    name_en: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    name_ps: Mapped[str | None] = mapped_column(String(80), nullable=True)
     flag: Mapped[str | None] = mapped_column(String(16), nullable=True)
     buy_rate: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False, default=0)
     sell_rate: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False, default=0)

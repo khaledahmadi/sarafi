@@ -7,23 +7,24 @@ import { homePathForUser, login, signup } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/client";
 import { useSession } from "@/hooks/use-session";
 import { errorClass, fieldClass, fieldWithError, labelClass } from "@/lib/forms";
-import { site } from "@/lib/site";
 import { emailSchema, friendlyError, passwordSchema } from "@/lib/validation";
 import { isTrustedDevice, setTrustedDevice } from "@/lib/trusted-device";
-
-const title = `ورود و ثبت‌نام | ${site.name}`;
-const description = "وارد داشبورد شوید تا درخواست‌های حواله و محتوای سایت را مدیریت کنید.";
+import { useLocale } from "@/i18n";
+import { pageMeta, resolvePageLocale } from "@/i18n/meta";
 
 export const Route = createFileRoute("/auth")({
-  head: () => ({
-    meta: [
-      { title },
-      { name: "description", content: description },
-      { property: "og:title", content: title },
-      { property: "og:description", content: description },
-      { name: "robots", content: "noindex" },
-    ],
-  }),
+  loader: async () => ({ locale: await resolvePageLocale() }),
+  head: ({ loaderData }) => {
+    const base = pageMeta(
+      loaderData?.locale ?? "fa",
+      "meta.authTitle",
+      "meta.authDescription",
+    );
+    return {
+      ...base,
+      meta: [...base.meta, { name: "robots", content: "noindex" }],
+    };
+  },
   ssr: false,
   component: AuthPage,
 });
@@ -31,8 +32,8 @@ export const Route = createFileRoute("/auth")({
 const signInSchema = z.object({ email: emailSchema, password: passwordSchema });
 
 const signUpSchema = signInSchema.extend({
-  fullName: z.string().trim().min(3, "نام و تخلص را وارد کنید").max(100),
-  phone: z.string().trim().min(6, "شماره تماس معتبر وارد کنید").max(24),
+  fullName: z.string().trim().min(3, "Enter your full name").max(100),
+  phone: z.string().trim().min(6, "Enter a valid phone number").max(24),
 });
 
 type FieldErrors = Partial<Record<"email" | "password" | "fullName" | "phone", string>>;
@@ -54,6 +55,7 @@ function AuthPage() {
   const [errors, setErrors] = useState<FieldErrors>({});
   const { user, ready } = useSession();
   const navigate = useNavigate();
+  const { t } = useLocale();
 
   useEffect(() => {
     setRemember(isTrustedDevice());
@@ -72,7 +74,7 @@ function AuthPage() {
         const parsed = signUpSchema.safeParse(form);
         if (!parsed.success) {
           setErrors(collectErrors(parsed.error));
-          toast.error("اطلاعات فرم را بررسی کنید");
+          toast.error(t("auth.formInvalid"));
           return;
         }
         setErrors({});
@@ -82,21 +84,21 @@ function AuthPage() {
           full_name: parsed.data.fullName,
           phone: parsed.data.phone,
         });
-        if ("ok" in result && result.ok === false) {
-          const message = friendlyError(result.message);
-          setErrors({
-            email: result.fieldErrors?.["email"] ?? message,
-            ...(result.fieldErrors ?? {}),
-          });
-          toast.error(message);
+        if ("id" in result) {
+          navigate({ to: homePathForUser(result) });
           return;
         }
-        navigate({ to: homePathForUser(result) });
+        const message = friendlyError(result.message);
+        setErrors({
+          email: result.fieldErrors?.["email"] ?? message,
+          ...(result.fieldErrors ?? {}),
+        });
+        toast.error(message);
       } else {
         const parsed = signInSchema.safeParse(form);
         if (!parsed.success) {
           setErrors(collectErrors(parsed.error));
-          toast.error("اطلاعات فرم را بررسی کنید");
+          toast.error(t("auth.formInvalid"));
           return;
         }
         setErrors({});
@@ -105,7 +107,7 @@ function AuthPage() {
           navigate({ to: homePathForUser(user) });
         } catch (error) {
           const message =
-            error instanceof ApiError ? "ایمیل یا رمز عبور نادرست است" : friendlyError(undefined);
+            error instanceof ApiError ? t("auth.badCredentials") : friendlyError(undefined);
           setErrors({ password: message });
           toast.error(message);
         }
@@ -134,18 +136,16 @@ function AuthPage() {
       <div className="relative mx-auto flex max-w-md flex-col justify-center px-4 py-16">
         <div className="rounded-2xl bg-card p-7 text-card-foreground shadow-lg">
           <h1 className="text-xl font-extrabold">
-            {mode === "signin" ? "ورود به داشبورد" : "ایجاد حساب کاربری"}
+            {mode === "signin" ? t("auth.signInHeading") : t("auth.signUpHeading")}
           </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            برای مدیریت درخواست‌های حواله و محتوای سایت وارد شوید.
-          </p>
+          <p className="mt-2 text-sm text-muted-foreground">{t("auth.subtitle")}</p>
 
           <form onSubmit={submit} className="mt-6 space-y-4">
             {mode === "signup" && (
               <>
                 <div>
                   <label className={labelClass} htmlFor="fullName">
-                    نام و تخلص
+                    {t("auth.fullNameLabel")}
                   </label>
                   <input
                     id="fullName"
@@ -164,7 +164,7 @@ function AuthPage() {
                 </div>
                 <div>
                   <label className={labelClass} htmlFor="phone">
-                    شماره تماس
+                    {t("auth.phone")}
                   </label>
                   <input
                     id="phone"
@@ -185,7 +185,7 @@ function AuthPage() {
             )}
             <div>
               <label className={labelClass} htmlFor="email">
-                ایمیل
+                {t("auth.email")}
               </label>
               <input
                 id="email"
@@ -206,7 +206,7 @@ function AuthPage() {
             </div>
             <div>
               <label className={labelClass} htmlFor="password">
-                رمز عبور
+                {t("auth.password")}
               </label>
               <input
                 id="password"
@@ -224,7 +224,9 @@ function AuthPage() {
                   {errors.password}
                 </span>
               ) : (
-                mode === "signup" && <span className="form-hint mt-1 block">حداقل ۶ حرف</span>
+                mode === "signup" && (
+                  <span className="form-hint mt-1 block">{t("auth.passwordHint")}</span>
+                )
               )}
             </div>
             <label className="flex items-start gap-2.5 rounded-xl border border-input bg-muted/40 px-3 py-2.5">
@@ -236,13 +238,8 @@ function AuthPage() {
                 className="mt-0.5 size-4 accent-primary"
               />
               <span className="text-xs leading-5">
-                <span className="block font-semibold text-foreground">
-                  مرا به خاطر بسپار (دستگاه مورد اعتماد)
-                </span>
-                <span className="form-hint block">
-                  نشست روی این دستگاه فعال می‌ماند. در غیر این صورت پس از ۳۰ دقیقه بی‌فعالیتی
-                  به‌طور خودکار خارج می‌شوید. در دستگاه‌های عمومی این گزینه را انتخاب نکنید.
-                </span>
+                <span className="block font-semibold text-foreground">{t("auth.rememberTitle")}</span>
+                <span className="form-hint block">{t("auth.rememberHint")}</span>
               </span>
             </label>
             <button
@@ -250,7 +247,7 @@ function AuthPage() {
               disabled={busy}
               className="w-full rounded-xl bg-primary px-5 py-3 text-sm font-bold text-primary-foreground disabled:opacity-60"
             >
-              {mode === "signin" ? "ورود" : "ثبت‌نام"}
+              {mode === "signin" ? t("auth.signInCta") : t("auth.signUpTab")}
             </button>
           </form>
 
@@ -261,12 +258,12 @@ function AuthPage() {
             }}
             className="mt-5 w-full text-sm text-primary"
           >
-            {mode === "signin" ? "حساب کاربری ندارید؟ ثبت‌نام کنید" : "قبلاً ثبت‌نام کرده‌اید؟ ورود"}
+            {mode === "signin" ? t("auth.switchToSignUp") : t("auth.switchToSignIn")}
           </button>
         </div>
 
         <Link to="/" className="mt-6 text-center text-sm text-navy-foreground/70">
-          بازگشت به صفحه اصلی
+          {t("auth.backHome")}
         </Link>
       </div>
     </div>

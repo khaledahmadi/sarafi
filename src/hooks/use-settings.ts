@@ -1,4 +1,8 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { useLocale } from "@/i18n";
+import type { Locale } from "@/i18n/config";
+import { localizeDigits } from "@/i18n/format";
+import { catalogs } from "@/i18n/messages";
 import { settingsQuery } from "@/lib/queries";
 import { site } from "@/lib/site";
 
@@ -7,12 +11,14 @@ export type SettingRow = {
   group_key: string;
   label_fa: string;
   value: string;
+  value_en?: string | null;
+  value_ps?: string | null;
   input_kind: string;
   hint_fa: string | null;
   sort_order: number;
 };
 
-/** Fallbacks keep the public pages readable before the settings query resolves. */
+/** Fallbacks keep the public pages readable before the settings query resolves (Farsi defaults). */
 const fallbacks: Record<string, string> = {
   "brand.name": site.name,
   "brand.tagline": site.tagline,
@@ -80,19 +86,113 @@ const fallbacks: Record<string, string> = {
   "about.stat4_label": "پشتیبانی حواله",
 };
 
+/** Keys that have translations under `settings.*` in the i18n catalogs. */
+const LOCALIZED_SETTING_KEYS = new Set([
+  "brand.name",
+  "brand.tagline",
+  "brand.description",
+  "home.badge",
+  "home.hero_title",
+  "home.hero_title_accent",
+  "home.hero_description",
+  "home.cta_primary",
+  "home.cta_secondary",
+  "home.live_rates_notice",
+  "home.stat1_label",
+  "home.stat2_label",
+  "home.stat3_label",
+  "home.services_title",
+  "home.services_description",
+  "home.why_title",
+  "home.adv1_title",
+  "home.adv1_text",
+  "home.adv2_title",
+  "home.adv2_text",
+  "home.adv3_title",
+  "home.adv3_text",
+  "home.adv4_title",
+  "home.adv4_text",
+  "home.articles_title",
+  "home.services_eyebrow",
+  "home.why_eyebrow",
+  "home.articles_eyebrow",
+  "home.rates_full_link",
+  "home.rates_table_link",
+  "home.articles_all_link",
+  "services.hero_title",
+  "services.hero_description",
+  "services.cta_title",
+  "services.cta_text",
+  "rates.hero_title",
+  "rates.hero_description",
+  "rates.notice",
+  "branches.hero_title",
+  "branches.hero_description",
+  "contact.hero_description",
+  "about.hero_description",
+  "about.value1_title",
+  "about.value1_text",
+  "about.value2_title",
+  "about.value2_text",
+  "about.value3_title",
+  "about.value3_text",
+  "about.value4_title",
+  "about.value4_text",
+  "about.stat4_value",
+  "about.stat4_label",
+]);
+
+function settingsCatalogValue(locale: Locale, key: string): string | undefined {
+  if (!LOCALIZED_SETTING_KEYS.has(key)) return undefined;
+  const parts = key.split(".");
+  let current: unknown = catalogs[locale].settings;
+  for (const part of parts) {
+    if (current == null || typeof current !== "object") return undefined;
+    current = (current as Record<string, unknown>)[part];
+  }
+  return typeof current === "string" ? current : undefined;
+}
+
 /**
  * Site-wide editable content. Everything here is managed by admins in
  * /dashboard/pages and rendered on the public website.
+ *
+ * Locale note: prefers `value_en` / `value_ps` from the API when present.
+ * Otherwise, for en/ps, empty DB values (or values that still equal the FA
+ * default) resolve from the `settings.*` message catalog. Custom admin FA
+ * overrides still show as FA until per-locale values are filled in.
  */
 export function useSiteSettings() {
   const query = useSuspenseQuery(settingsQuery);
+  const { locale } = useLocale();
   const rows = query.data as SettingRow[];
-  const map = new Map(rows.map((row) => [row.key, row.value]));
+  const map = new Map(rows.map((row) => [row.key, row]));
 
   function get(key: string, fallback = ""): string {
-    const value = map.get(key);
-    if (value && value.trim()) return value;
-    return fallbacks[key] ?? fallback;
+    const row = map.get(key);
+    const faValue = row?.value?.trim() ?? "";
+    const faFallback = fallbacks[key] ?? fallback;
+
+    const finish = (value: string) => localizeDigits(value, locale);
+
+    if (locale === "en") {
+      const en = row?.value_en?.trim();
+      if (en) return finish(en);
+    }
+    if (locale === "ps") {
+      const ps = row?.value_ps?.trim();
+      if (ps) return finish(ps);
+    }
+
+    if (locale !== "fa" && LOCALIZED_SETTING_KEYS.has(key)) {
+      if (!faValue || faValue === faFallback) {
+        return finish(settingsCatalogValue(locale, key) ?? faFallback);
+      }
+      return finish(faValue);
+    }
+
+    if (faValue) return finish(faValue);
+    return finish(faFallback);
   }
 
   return { rows, get, loading: query.isLoading };

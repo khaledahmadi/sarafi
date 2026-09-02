@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { listRates } from "@/lib/public.functions";
+import type { RateSourceId } from "@/lib/rate-sources";
 
 /**
  * Polls FX rates periodically and highlights codes that changed.
- * Replaces Supabase realtime subscription.
  */
-export function useLiveRates(pollMs = 15_000) {
+export function useLiveRates(source: RateSourceId, pollMs = 30_000) {
   const queryClient = useQueryClient();
   const [changed, setChanged] = useState<string[]>([]);
   const [lastEventAt, setLastEventAt] = useState<Date | null>(null);
@@ -15,11 +15,17 @@ export function useLiveRates(pollMs = 15_000) {
   const previousRef = useRef<Map<string, string>>(new Map());
 
   useEffect(() => {
+    previousRef.current = new Map();
+    setChanged([]);
+    setLastEventAt(null);
+  }, [source]);
+
+  useEffect(() => {
     let cancelled = false;
 
     const poll = async () => {
       try {
-        const rates = await listRates();
+        const rates = await listRates(source);
         if (cancelled) return;
         setConnected(true);
         const next = new Map(
@@ -32,7 +38,7 @@ export function useLiveRates(pollMs = 15_000) {
         });
         previousRef.current = next;
         if (changedCodes.length > 0) {
-          queryClient.invalidateQueries({ queryKey: ["rates"] });
+          queryClient.invalidateQueries({ queryKey: ["rates", source] });
           setLastEventAt(new Date());
           setChanged((prev) => {
             const merged = [...prev];
@@ -56,7 +62,7 @@ export function useLiveRates(pollMs = 15_000) {
       clearInterval(id);
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [pollMs, queryClient]);
+  }, [pollMs, queryClient, source]);
 
   return { changed, lastEventAt, connected };
 }

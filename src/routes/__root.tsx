@@ -14,6 +14,7 @@ import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 
 import appCss from "../styles.css?url";
+import { FONT_STYLESHEET_URL } from "../lib/fonts";
 import { Header } from "../components/site/Header";
 import { AppHeader } from "../components/site/AppHeader";
 import { ContactWidgets } from "../components/site/ContactWidgets";
@@ -24,23 +25,31 @@ import { settingsQuery } from "../lib/queries";
 import { bootstrapAuth } from "../lib/api/auth";
 import { getAuthSnapshot, markReactHydrated, subscribeAuth } from "../lib/api/auth-store";
 import { useHasMounted } from "../hooks/use-has-mounted";
+import { RateSourceProvider } from "../hooks/use-rate-source";
 import { useSessionExpiry } from "../hooks/use-session-expiry";
+import { getRequestRateSource } from "../lib/get-request-rate-source";
+import {
+  LocaleProvider,
+  LOCALE_BOOTSTRAP_SCRIPT,
+  translate,
+  useLocale,
+} from "@/i18n";
+import { getRequestLocale } from "@/i18n/get-request-locale";
 
 function NotFoundComponent() {
+  const { t } = useLocale();
   return (
     <div className="flex min-h-[70vh] items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
-        <h1 className="text-7xl font-extrabold text-primary">۴۰۴</h1>
-        <h2 className="mt-4 text-xl font-bold">صفحه پیدا نشد</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          صفحه‌ای که به دنبال آن هستید وجود ندارد یا منتقل شده است.
-        </p>
+        <h1 className="text-7xl font-extrabold text-primary">{t("errors.notFoundCode")}</h1>
+        <h2 className="mt-4 text-xl font-bold">{t("errors.notFoundTitle")}</h2>
+        <p className="mt-2 text-sm text-muted-foreground">{t("errors.notFoundBody")}</p>
         <div className="mt-6">
           <Link
             to="/"
             className="inline-flex items-center justify-center rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground"
           >
-            بازگشت به خانه
+            {t("common.backHome")}
           </Link>
         </div>
       </div>
@@ -51,14 +60,13 @@ function NotFoundComponent() {
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
   const router = useRouter();
+  const { t } = useLocale();
 
   return (
     <div className="flex min-h-[70vh] items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
-        <h1 className="text-xl font-bold">این صفحه بارگذاری نشد</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          مشکلی رخ داده است. می‌توانید مجدداً تلاش کنید یا به خانه بازگردید.
-        </p>
+        <h1 className="text-xl font-bold">{t("errors.pageFailedTitle")}</h1>
+        <p className="mt-2 text-sm text-muted-foreground">{t("errors.pageFailedBody")}</p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
             onClick={() => {
@@ -67,13 +75,13 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
             }}
             className="rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground"
           >
-            تلاش مجدد
+            {t("common.retry")}
           </button>
           <a
             href="/"
             className="rounded-lg border border-input bg-background px-5 py-2.5 text-sm font-semibold"
           >
-            خانه
+            {t("common.home")}
           </a>
         </div>
       </div>
@@ -82,12 +90,22 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 }
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
-  loader: ({ context }) => context.queryClient.fetchQuery(settingsQuery),
-  head: () => ({
+  loader: async ({ context }) => {
+    const [, locale, rateSource] = await Promise.all([
+      context.queryClient.fetchQuery(settingsQuery),
+      getRequestLocale(),
+      getRequestRateSource(),
+    ]);
+    return { locale, rateSource };
+  },
+  head: ({ loaderData }) => ({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { name: "author", content: "صرافی سروری" },
+      {
+        name: "author",
+        content: translate(loaderData?.locale ?? "fa", "meta.author"),
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { title: "Sarwari Sarafi" },
@@ -115,7 +133,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap",
+        href: FONT_STYLESHEET_URL,
       },
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
     ],
@@ -128,11 +146,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="fa" dir="rtl">
+    <html lang="fa" dir="rtl" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: LOCALE_BOOTSTRAP_SCRIPT }} />
         <HeadContent />
       </head>
-      <body>
+      <body className="font-sans antialiased" suppressHydrationWarning>
         {children}
         <Scripts />
         <Analytics />
@@ -144,6 +163,7 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const { locale, rateSource } = Route.useLoaderData();
   const router = useRouter();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const mounted = useHasMounted();
@@ -171,28 +191,50 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <NavigationTopLoader />
-      <SessionExpiryWatcher />
-      {isAppArea ? (
-        <div className="flex min-h-screen flex-col bg-muted/30">
-          <AppHeader />
-          <main className="flex-1">
-            <ManageShell>{mounted ? <Outlet /> : null}</ManageShell>
-          </main>
-        </div>
-      ) : (
-        <div className="flex min-h-screen flex-col">
-          <Header />
-          <main className="flex-1">
-            <Outlet />
-          </main>
-          <Footer />
-          {mounted ? <ContactWidgets /> : null}
-        </div>
-      )}
-      {mounted ? <Toaster position="top-center" dir="rtl" richColors /> : null}
+      <LocaleProvider initialLocale={locale}>
+        <DocumentLocaleSync />
+        <RateSourceProvider initialSource={rateSource}>
+          <NavigationTopLoader />
+          <SessionExpiryWatcher />
+          {isAppArea ? (
+            <div className="flex min-h-screen flex-col bg-muted/30">
+              <AppHeader />
+              <main className="flex-1">
+                <ManageShell>{mounted ? <Outlet /> : null}</ManageShell>
+              </main>
+            </div>
+          ) : (
+            <div className="flex min-h-screen flex-col">
+              <Header />
+              <main className="flex-1">
+                <Outlet />
+              </main>
+              <Footer />
+              {mounted ? <ContactWidgets /> : null}
+            </div>
+          )}
+          <LocaleToaster mounted={mounted} />
+        </RateSourceProvider>
+      </LocaleProvider>
     </QueryClientProvider>
   );
+}
+
+/** Keep <html lang/dir> aligned after hydrate (shell defaults to fa + bootstrap script). */
+function DocumentLocaleSync() {
+  const { locale, dir } = useLocale();
+  useLayoutEffect(() => {
+    document.documentElement.lang = locale;
+    document.documentElement.dir = dir;
+    document.documentElement.dataset["locale"] = locale;
+  }, [locale, dir]);
+  return null;
+}
+
+function LocaleToaster({ mounted }: { mounted: boolean }) {
+  const { dir } = useLocale();
+  if (!mounted) return null;
+  return <Toaster position="top-center" dir={dir} richColors />;
 }
 
 function SessionExpiryWatcher() {

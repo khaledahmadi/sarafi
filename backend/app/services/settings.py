@@ -19,5 +19,9 @@ def update_settings(db: Session, values: list[SettingValueItem]) -> dict:
         if not row:
             return {"ok": False, "message": f"کلید تنظیمات یافت نشد: {item.key}"}
         row.value = item.value
+        if "value_en" in item.model_fields_set:
+            row.value_en = item.value_en
+        if "value_ps" in item.model_fields_set:
+            row.value_ps = item.value_ps
     db.commit()
     return {"ok": True}

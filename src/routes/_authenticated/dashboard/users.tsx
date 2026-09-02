@@ -23,18 +23,18 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useLocale } from "@/i18n";
 import { useRoles, useSession } from "@/hooks/use-session";
 import { AppSelect, SelectField, TextField } from "@/components/site/Field";
 import { fieldClass, labelClass } from "@/lib/forms";
 import { createAdminUser, listAdminUsers, setUserRole } from "@/lib/portal.functions";
 import { createAdminUserSchema, fieldErrorMap } from "@/lib/validation";
-import { faDate, faNum, site } from "@/lib/site";
+import { site } from "@/lib/site";
 
 export const Route = createFileRoute("/_authenticated/dashboard/users")({
   head: () => ({
     meta: [
-      { title: `مدیریت کاربران و نقش‌ها | ${site.name}` },
-      { name: "description", content: "جست‌وجو و تغییر نقش کاربران سیستم صرافی." },
+      { title: `Users | ${site.name}` },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -42,12 +42,6 @@ export const Route = createFileRoute("/_authenticated/dashboard/users")({
 });
 
 type AppRole = "admin" | "staff" | "customer";
-
-const roleLabels: Record<AppRole, string> = {
-  admin: "مدیر",
-  staff: "کارشناس",
-  customer: "مشتری",
-};
 
 const roleBadge: Record<AppRole, string> = {
   admin: "bg-primary/10 text-primary border-primary/30",
@@ -63,13 +57,6 @@ type SortKey = "full_name" | "phone" | "role" | "created_at";
 type SortDir = "asc" | "desc";
 
 const pageSizes = [5, 10, 25, 50, 100];
-
-const sortLabels: Record<SortKey, string> = {
-  full_name: "کاربر",
-  phone: "شماره تماس",
-  role: "نقش فعلی",
-  created_at: "تاریخ عضویت",
-};
 
 type Member = {
   id: string;
@@ -97,12 +84,25 @@ const emptyForm: CreateForm = {
 
 function initials(name: string | null) {
   const clean = (name ?? "").trim();
-  if (!clean) return "؟";
+  if (!clean) return "?";
   const parts = clean.split(/\s+/);
   return (parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "");
 }
 
 function UsersPage() {
+  const { t, n, d } = useLocale();
+  const roleLabels = {
+    admin: t("admin.roleAdmin"),
+    staff: t("admin.roleStaff"),
+    customer: t("admin.roleCustomer"),
+  } as const;
+  const sortLabels: Record<SortKey, string> = {
+    full_name: t("admin.sortUser"),
+    phone: t("admin.staffPhone"),
+    role: t("admin.sortRole"),
+    created_at: t("admin.sortJoined"),
+  };
+
   const { isAdmin, loading } = useRoles();
   const { user } = useSession();
   const queryClient = useQueryClient();
@@ -136,7 +136,7 @@ function UsersPage() {
       const parsed = createAdminUserSchema.safeParse(state);
       if (!parsed.success) {
         setErrors(fieldErrorMap(parsed.error));
-        throw new Error("اطلاعات وارد شده کامل نیست");
+        throw new Error(t("admin.formIncomplete"));
       }
       setErrors({});
       return createAdminUser({ data: parsed.data });
@@ -147,7 +147,7 @@ function UsersPage() {
         toast.error(result.message);
         return;
       }
-      toast.success(`کاربر با نقش ${roleLabels[form.role]} ثبت شد`);
+      toast.success(t("admin.userCreated", { role: roleLabels[form.role] }));
       setForm(emptyForm);
       setErrors({});
       void queryClient.invalidateQueries({ queryKey: ["admin-members"] });
@@ -162,7 +162,7 @@ function UsersPage() {
     },
     onSuccess: (_data, vars) => {
       const member = members.data?.find((m) => m.id === vars.userId);
-      toast.success(`نقش «${member?.full_name ?? "کاربر"}» به ${roleLabels[vars.role]} تغییر کرد`);
+      toast.success(t("admin.roleChanged", { name: member?.full_name ?? t("admin.unnamed"), role: roleLabels[vars.role] }));
       void queryClient.invalidateQueries({ queryKey: ["admin-members"] });
       void queryClient.invalidateQueries({ queryKey: ["roles"] });
     },
@@ -220,10 +220,10 @@ function UsersPage() {
 
   function exportCsv() {
     if (filtered.length === 0) {
-      toast.error("داده‌ای برای خروجی وجود ندارد");
+      toast.error(t("admin.noDataExport"));
       return;
     }
-    const header = ["شناسه کاربر", "نام", "شماره تماس", "نقش", "تاریخ عضویت"];
+    const header = [t("admin.csvUserId"), t("admin.csvName"), t("admin.csvPhone"), t("admin.csvRole"), t("admin.csvJoined")];
     const cell = (value: string) => `"${value.replace(/"/g, '""')}"`;
     const lines = [
       header.map(cell).join(","),
@@ -246,39 +246,36 @@ function UsersPage() {
     link.download = `sarafi-users-${new Date().toISOString().slice(0, 10)}.csv`;
     link.click();
     URL.revokeObjectURL(url);
-    toast.success(`خروجی CSV برای ${faNum(filtered.length, 0)} کاربر آماده شد`);
+    toast.success(t("admin.usersCsvReady", { count: n(filtered.length, 0) }));
   }
 
   if (loading) {
-    return <p className="text-sm text-muted-foreground">در حال بارگذاری…</p>;
+    return <p className="text-sm text-muted-foreground">{t("common.loading")}</p>;
   }
 
   if (!isAdmin) {
     return (
       <div className="p-6 card-elevated">
-        <h1 className="text-lg font-bold">دسترسی محدود</h1>
+        <h1 className="text-lg font-bold">{t("admin.accessDeniedTitle")}</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          مدیریت کاربران و نقش‌ها تنها برای مدیر سیستم مجاز است.
+          {t("admin.usersAccess")}
         </p>
       </div>
     );
   }
 
   const stats = [
-    { label: "کل کاربران", value: counts.total, icon: Users2 },
-    { label: "مدیر", value: counts.admin, icon: ShieldCheck },
-    { label: "کارشناس", value: counts.staff, icon: UserCog },
-    { label: "مشتری", value: counts.customer, icon: Users2 },
+    { label: t("admin.usersTotal"), value: counts.total, icon: Users2 },
+    { label: t("admin.roleAdmin"), value: counts.admin, icon: ShieldCheck },
+    { label: t("admin.roleStaff"), value: counts.staff, icon: UserCog },
+    { label: t("admin.roleCustomer"), value: counts.customer, icon: Users2 },
   ];
 
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-2xl font-extrabold">مدیریت کاربران و نقش‌ها</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          کارشناس جدید بسازید، جست‌وجو کنید و نقش کاربران را تغییر دهید؛ تغییر نقش حساب خودتان
-          امکان‌پذیر نیست.
-        </p>
+        <h1 className="text-2xl font-extrabold">{t("admin.usersTitle")}</h1>
+        <p className="mt-2 text-sm text-muted-foreground">{t("admin.usersSubtitle")}</p>
       </header>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -289,7 +286,7 @@ function UsersPage() {
             </span>
             <div>
               <p className="text-xs text-muted-foreground">{stat.label}</p>
-              <p className="text-lg font-extrabold">{faNum(stat.value, 0)}</p>
+              <p className="text-lg font-extrabold">{n(stat.value, 0)}</p>
             </div>
           </div>
         ))}
@@ -300,7 +297,7 @@ function UsersPage() {
       <div className="grid gap-4 p-5 card-elevated lg:grid-cols-[1fr_13rem_11rem_auto] lg:items-end">
         <div>
           <label className={labelClass} htmlFor="user-search">
-            جست‌وجوی کاربر
+            {t("admin.usersSearch")}
           </label>
           <div className="relative mt-2">
             <Search className="pointer-events-none absolute end-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -308,7 +305,7 @@ function UsersPage() {
               id="user-search"
               dir="rtl"
               className={`${fieldClass} pe-10`}
-              placeholder="نام، شماره تماس یا شناسه کاربر"
+              placeholder={t("admin.usersSearchPh")}
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
@@ -319,14 +316,14 @@ function UsersPage() {
         </div>
         <div>
           <label className={labelClass} htmlFor="role-filter">
-            فیلتر نقش
+            {t("admin.roleFilter")}
           </label>
           <div className="mt-2">
             <AppSelect
               id="role-filter"
               value={roleFilter}
               options={[
-                { value: "all", label: "همه نقش‌ها" },
+                { value: "all", label: t("admin.allRoles") },
                 ...roleOrder.map((role) => ({ value: role, label: roleLabels[role] })),
               ]}
               onValueChange={(value) => {
@@ -338,7 +335,7 @@ function UsersPage() {
         </div>
         <div>
           <label className={labelClass} htmlFor="page-size">
-            تعداد در هر صفحه
+            {t("admin.pageSize")}
           </label>
           <div className="mt-2">
             <AppSelect
@@ -346,7 +343,7 @@ function UsersPage() {
               value={String(pageSize)}
               options={pageSizes.map((size) => ({
                 value: String(size),
-                label: `${faNum(size, 0)} ردیف`,
+                label: `${t("admin.rows", { count: n(size, 0) })}`,
               }))}
               onValueChange={(value) => {
                 setPageSize(Number(value));
@@ -360,13 +357,12 @@ function UsersPage() {
           onClick={exportCsv}
           className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-bold text-primary-foreground"
         >
-          <Download className="size-4" /> خروجی CSV
+          <Download className="size-4" /> {t("admin.exportCsv")}
         </button>
       </div>
 
       <p className="text-xs text-muted-foreground">
-        نمایش {faNum(paginated.length, 0)} کاربر از {faNum(filtered.length, 0)} نتیجه — صفحه{" "}
-        {faNum(currentPage, 0)} از {faNum(totalPages, 0)}
+        {t("admin.usersShowing", { shown: n(paginated.length, 0), total: n(filtered.length, 0), page: n(currentPage, 0), pages: n(totalPages, 0) })}
       </p>
 
       <div className="overflow-x-auto card-elevated">
@@ -379,7 +375,7 @@ function UsersPage() {
                     type="button"
                     onClick={() => toggleSort(key)}
                     className="inline-flex items-center gap-1 font-semibold hover:text-primary"
-                    aria-label={`مرتب‌سازی بر اساس ${sortLabels[key]}`}
+                    aria-label={t("admin.sortBy", { label: sortLabels[key] })}
                   >
                     {sortLabels[key]}
                     <ArrowUpDown
@@ -387,13 +383,13 @@ function UsersPage() {
                     />
                     {sortKey === key && (
                       <span className="text-[10px] text-muted-foreground">
-                        {sortDir === "asc" ? "صعودی" : "نزولی"}
+                        {sortDir === "asc" ? t("admin.asc") : t("admin.desc")}
                       </span>
                     )}
                   </button>
                 </th>
               ))}
-              <th className="px-4 py-3 font-semibold">تغییر نقش</th>
+              <th className="px-4 py-3 font-semibold">{t("admin.changeRole")}</th>
             </tr>
           </thead>
 
@@ -401,7 +397,7 @@ function UsersPage() {
             {!members.isLoading && filtered.length === 0 && (
               <tr>
                 <td className="px-4 py-10 text-center text-muted-foreground" colSpan={5}>
-                  کاربری با این مشخصات یافت نشد.
+                  {t("admin.usersEmpty")}
                 </td>
               </tr>
             )}
@@ -418,10 +414,10 @@ function UsersPage() {
                         {initials(member.full_name)}
                       </span>
                       <span>
-                        <span className="font-semibold">{member.full_name ?? "بدون نام"}</span>
+                        <span className="font-semibold">{member.full_name ?? t("admin.unnamed")}</span>
                         {isSelf && (
                           <span className="ms-2 rounded-full bg-accent/20 px-2 py-0.5 text-[10px] font-bold text-accent-foreground">
-                            حساب شما
+                            {t("admin.yourAccount")}
                           </span>
                         )}
                         <span
@@ -444,18 +440,18 @@ function UsersPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-xs text-muted-foreground">
-                    {faDate(member.created_at)}
+                    {d(member.created_at)}
                   </td>
                   <td className="px-4 py-3">
                     {isSelf || isAdminAccount ? (
-                      <span className="text-xs text-muted-foreground">قابل تغییر نیست</span>
+                      <span className="text-xs text-muted-foreground">{t("admin.cannotChangeRole")}</span>
                     ) : updating ? (
-                      <span className="text-xs text-muted-foreground">در حال ذخیره…</span>
+                      <span className="text-xs text-muted-foreground">{t("admin.saving")}</span>
                     ) : (
                       <div className="w-40">
                         <AppSelect
                           size="sm"
-                          ariaLabel={`نقش ${member.full_name ?? "کاربر"}`}
+                          ariaLabel={t("admin.roleLabel") + ` ${member.full_name ?? t("admin.userFallback")}`}
                           value={current}
                           options={assignableRoles.map((role) => ({
                             value: role,
@@ -478,7 +474,7 @@ function UsersPage() {
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-xs text-muted-foreground">
-          صفحه {faNum(currentPage, 0)} از {faNum(totalPages, 0)}
+          {t("admin.pageOf", { page: n(currentPage, 0), pages: n(totalPages, 0) })}
         </p>
         <div className="flex items-center gap-2">
           <button
@@ -487,7 +483,7 @@ function UsersPage() {
             disabled={currentPage <= 1}
             className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-2 text-xs font-semibold disabled:opacity-40"
           >
-            <ChevronRight className="size-3.5" /> قبلی
+            <ChevronRight className="size-3.5" /> {t("common.previous")}
           </button>
           <button
             type="button"
@@ -495,7 +491,7 @@ function UsersPage() {
             disabled={currentPage >= totalPages}
             className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-2 text-xs font-semibold disabled:opacity-40"
           >
-            بعدی <ChevronLeft className="size-3.5" />
+            {t("common.next")} <ChevronLeft className="size-3.5" />
           </button>
         </div>
       </div>
@@ -508,19 +504,19 @@ function UsersPage() {
           }}
           className="h-fit space-y-4 p-5 card-elevated"
         >
-          <h2 className="text-base font-bold">افزودن کارشناس</h2>
+          <h2 className="text-base font-bold">{t("admin.addStaff")}</h2>
           <p className="text-xs leading-6 text-muted-foreground">
-            حساب جدید با نقش کارشناس ساخته می‌شود تا به داشبورد دسترسی داشته باشد.
+            {t("admin.addStaffHint")}
           </p>
           <TextField
-            label="نام و تخلص"
+            label={t("admin.staffFullName")}
             value={form.full_name}
             error={errors["full_name"]}
             maxLength={255}
             onChange={(event) => setForm((prev) => ({ ...prev, full_name: event.target.value }))}
           />
           <TextField
-            label="ایمیل"
+            label={t("admin.staffEmail")}
             type="email"
             dir="ltr"
             autoComplete="off"
@@ -530,26 +526,26 @@ function UsersPage() {
             onChange={(event) => setForm((prev) => ({ ...prev, email: event.target.value }))}
           />
           <TextField
-            label="شماره تماس"
+            label={t("admin.staffPhone")}
             dir="ltr"
             value={form.phone}
             error={errors["phone"]}
             maxLength={64}
-            hint="اختیاری"
+            hint={t("admin.optionalHint")}
             onChange={(event) => setForm((prev) => ({ ...prev, phone: event.target.value }))}
           />
           <TextField
-            label="رمز عبور"
+            label={t("admin.staffPassword")}
             type="password"
             autoComplete="new-password"
             value={form.password}
             error={errors["password"]}
             maxLength={72}
-            hint="حداقل ۶ حرف"
+            hint={t("admin.minChars6")}
             onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))}
           />
           <SelectField
-            label="نقش"
+            label={t("admin.roleLabel")}
             value={form.role}
             error={errors["role"]}
             options={assignableRoles.map((role) => ({ value: role, label: roleLabels[role] }))}
@@ -561,7 +557,7 @@ function UsersPage() {
             className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground disabled:opacity-60"
           >
             <Plus className="size-4" />
-            {createUser.isPending ? "در حال ثبت…" : "ثبت کاربر"}
+            {createUser.isPending ? t("common.submitting") : t("admin.registerUser")}
           </button>
         </form>
       </div>
@@ -569,12 +565,13 @@ function UsersPage() {
       <AlertDialog open={Boolean(pending)} onOpenChange={(open) => !open && setPending(null)}>
         <AlertDialogContent dir="rtl" className="text-right">
           <AlertDialogHeader>
-            <AlertDialogTitle>تأیید تغییر نقش</AlertDialogTitle>
+            <AlertDialogTitle>{t("admin.roleConfirmTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              آیا نقش «{pending?.member.full_name ?? "این کاربر"}» از{" "}
-              {roleLabels[pending?.member.roles[0] ?? "customer"]} به{" "}
-              {pending ? roleLabels[pending.role] : ""} تغییر کند؟ سطح دسترسی کاربر بلافاصله تغییر
-              می‌کند.
+              {t("admin.roleConfirmBody", {
+                name: pending?.member.full_name ?? t("admin.thisUser"),
+                from: roleLabels[pending?.member.roles[0] ?? "customer"],
+                to: pending ? roleLabels[pending.role] : "",
+              })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="gap-2 sm:flex-row-reverse sm:justify-start">
@@ -584,9 +581,9 @@ function UsersPage() {
                 setPending(null);
               }}
             >
-              تأیید و ذخیره
+              {t("admin.confirmAndSave")}
             </AlertDialogAction>
-            <AlertDialogCancel>انصراف</AlertDialogCancel>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

@@ -5,7 +5,7 @@ import { useSession } from "@/hooks/use-session";
 import { articleCommentsQuery } from "@/lib/queries";
 import { createArticleComment, type PublicComment } from "@/lib/public.functions";
 import { commentSchema, fieldErrorMap } from "@/lib/validation";
-import { faDate, faNum } from "@/lib/site";
+import { useLocale } from "@/i18n";
 import { cn } from "@/lib/utils";
 
 const inputClass =
@@ -32,6 +32,7 @@ function CommentForm({
 }) {
   const queryClient = useQueryClient();
   const { user } = useSession();
+  const { t } = useLocale();
   const [form, setForm] = useState<CommentFormState>(emptyForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
@@ -45,7 +46,7 @@ function CommentForm({
       });
       if (!parsed.success) {
         setErrors(fieldErrorMap(parsed.error));
-        throw new Error("اطلاعات فرم را بررسی کنید");
+        throw new Error(t("common.formInvalid"));
       }
       setErrors({});
       return createArticleComment({
@@ -56,8 +57,8 @@ function CommentForm({
           ...(user
             ? {}
             : {
-                guest_name: parsed.data.guest_name,
-                guest_email: parsed.data.guest_email,
+                guest_name: parsed.data.guest_name ?? "",
+                guest_email: parsed.data.guest_email ?? "",
               }),
         },
       });
@@ -68,7 +69,7 @@ function CommentForm({
         toast.error(result.message);
         return;
       }
-      toast.success(parentId ? "پاسخ شما ثبت شد" : "نظر شما ثبت شد");
+      toast.success(parentId ? t("articles.replyPosted") : t("articles.commentPosted"));
       setForm(emptyForm);
       setTouched({});
       void queryClient.invalidateQueries({ queryKey: ["article-comments", slug] });
@@ -103,30 +104,30 @@ function CommentForm({
       {!user ? (
         <div>
           <label className="sr-only" htmlFor={parentId ? `reply-name-${parentId}` : "comment-name"}>
-            نام
+            {t("articles.commentName")}
           </label>
           <input
             id={parentId ? `reply-name-${parentId}` : "comment-name"}
             value={form.guestName}
             onChange={(event) => {
               setForm((prev) => ({ ...prev, guestName: event.target.value }));
-              if (touched.guest_name) validateField("guest_name", event.target.value);
+              if (touched['guest_name']) validateField("guest_name", event.target.value);
             }}
             onBlur={() => {
               setTouched((prev) => ({ ...prev, guest_name: true }));
               validateField("guest_name", form.guestName);
             }}
-            placeholder="نام"
-            className={cn(inputClass, "mb-3", errors.guest_name && "form-field-invalid")}
-            aria-invalid={Boolean(errors.guest_name)}
+            placeholder={t("articles.commentName")}
+            className={cn(inputClass, "mb-3", errors['guest_name'] && "form-field-invalid")}
+            aria-invalid={Boolean(errors['guest_name'])}
           />
-          {errors.guest_name ? (
+          {errors['guest_name'] ? (
             <p className="mb-3 text-xs font-semibold text-destructive" role="alert">
-              {errors.guest_name}
+              {errors['guest_name']}
             </p>
           ) : null}
           <label className="sr-only" htmlFor={parentId ? `reply-email-${parentId}` : "comment-email"}>
-            ایمیل
+            {t("articles.commentEmail")}
           </label>
           <input
             id={parentId ? `reply-email-${parentId}` : "comment-email"}
@@ -134,26 +135,26 @@ function CommentForm({
             value={form.guestEmail}
             onChange={(event) => {
               setForm((prev) => ({ ...prev, guestEmail: event.target.value }));
-              if (touched.guest_email) validateField("guest_email", event.target.value);
+              if (touched['guest_email']) validateField("guest_email", event.target.value);
             }}
             onBlur={() => {
               setTouched((prev) => ({ ...prev, guest_email: true }));
               validateField("guest_email", form.guestEmail);
             }}
-            placeholder="ایمیل"
-            className={cn(inputClass, errors.guest_email && "form-field-invalid")}
-            aria-invalid={Boolean(errors.guest_email)}
+            placeholder={t("articles.commentEmail")}
+            className={cn(inputClass, errors['guest_email'] && "form-field-invalid")}
+            aria-invalid={Boolean(errors['guest_email'])}
           />
-          {errors.guest_email ? (
+          {errors['guest_email'] ? (
             <p className="mt-1 text-xs font-semibold text-destructive" role="alert">
-              {errors.guest_email}
+              {errors['guest_email']}
             </p>
           ) : null}
         </div>
       ) : null}
 
       <label className="sr-only" htmlFor={parentId ? `reply-body-${parentId}` : "comment-body"}>
-        {parentId ? "پاسخ شما" : "نظر شما"}
+        {parentId ? t("articles.yourReply") : t("articles.yourComment")}
       </label>
       <textarea
         id={parentId ? `reply-body-${parentId}` : "comment-body"}
@@ -162,19 +163,19 @@ function CommentForm({
         value={form.body}
         onChange={(event) => {
           setForm((prev) => ({ ...prev, body: event.target.value }));
-          if (touched.body) validateField("body", event.target.value);
+          if (touched['body']) validateField("body", event.target.value);
         }}
         onBlur={() => {
           setTouched((prev) => ({ ...prev, body: true }));
           validateField("body", form.body);
         }}
-        placeholder={parentId ? "پاسخ شما" : "نظر شما"}
-        className={cn(inputClass, "min-h-[4.5rem] py-3", errors.body && "form-field-invalid")}
-        aria-invalid={Boolean(errors.body)}
+        placeholder={parentId ? t("articles.yourReply") : t("articles.yourComment")}
+        className={cn(inputClass, "min-h-[4.5rem] py-3", errors['body'] && "form-field-invalid")}
+        aria-invalid={Boolean(errors['body'])}
       />
-      {errors.body ? (
+      {errors['body'] ? (
         <p className="text-xs font-semibold text-destructive" role="alert">
-          {errors.body}
+          {errors['body']}
         </p>
       ) : null}
 
@@ -184,7 +185,7 @@ function CommentForm({
           disabled={submit.isPending}
           className="inline-flex min-h-[44px] items-center justify-center rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90 hover:shadow-md disabled:opacity-50 sm:min-h-10"
         >
-          {submit.isPending ? "در حال ارسال…" : submitLabel}
+          {submit.isPending ? t("articles.sending") : submitLabel}
         </button>
         {onDone ? (
           <button
@@ -192,7 +193,7 @@ function CommentForm({
             onClick={onDone}
             className="inline-flex min-h-[44px] items-center justify-center rounded-full px-4 py-2.5 text-sm font-semibold text-muted-foreground transition hover:text-foreground sm:min-h-10"
           >
-            لغو
+            {t("articles.cancel")}
           </button>
         ) : null}
       </div>
@@ -208,6 +209,7 @@ function CommentCard({
   slug: string;
 }) {
   const [replyOpen, setReplyOpen] = useState(false);
+  const { t, d } = useLocale();
 
   return (
     <li className="space-y-3">
@@ -215,7 +217,7 @@ function CommentCard({
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <p className="text-sm font-semibold text-foreground">{comment.author}</p>
           <time className="text-xs text-muted-foreground" dateTime={comment.created_at}>
-            {faDate(comment.created_at)}
+            {d(comment.created_at)}
           </time>
         </div>
         <p className="mt-1 text-sm leading-7 text-muted-foreground">{comment.body}</p>
@@ -224,14 +226,14 @@ function CommentCard({
           onClick={() => setReplyOpen((open) => !open)}
           className="mt-3 text-sm font-semibold text-primary"
         >
-          {replyOpen ? "بستن پاسخ" : "پاسخ"}
+          {replyOpen ? t("articles.closeReply") : t("articles.reply")}
         </button>
         {replyOpen ? (
           <div className="mt-4">
             <CommentForm
               slug={slug}
               parentId={comment.id}
-              submitLabel="ارسال پاسخ"
+              submitLabel={t("articles.sendReply")}
               onDone={() => setReplyOpen(false)}
             />
           </div>
@@ -249,6 +251,7 @@ function CommentCard({
 }
 
 export function ArticleComments({ slug }: { slug: string }) {
+  const { t, n } = useLocale();
   const comments = useQuery(articleCommentsQuery(slug));
   const items = comments.data ?? [];
   const total = items.reduce((count, item) => count + 1 + item.replies.length, 0);
@@ -258,14 +261,14 @@ export function ArticleComments({ slug }: { slug: string }) {
       <div className="mb-5 flex w-full items-center justify-start gap-3 sm:mb-6">
         <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary ring-4 ring-primary/15" aria-hidden="true" />
         <h2 className="text-xl font-semibold leading-tight tracking-tight sm:text-2xl">
-          نظرات
-          {total > 0 ? <span className="ms-2 text-base font-medium text-muted-foreground">({faNum(total, 0)})</span> : null}
+          {t("articles.comments")}
+          {total > 0 ? <span className="ms-2 text-base font-medium text-muted-foreground">({n(total, 0)})</span> : null}
         </h2>
       </div>
 
       {items.length === 0 ? (
         <p className="rounded-2xl bg-card px-5 py-6 text-sm text-muted-foreground shadow-[0_2px_32px_-8px_rgba(0,0,0,0.06)]">
-          هنوز نظری ثبت نشده است. اولین نظر را شما بنویسید.
+          {t("articles.noComments")}
         </p>
       ) : (
         <ul className="space-y-4">
@@ -276,7 +279,7 @@ export function ArticleComments({ slug }: { slug: string }) {
       )}
 
       <div className="mt-6">
-        <CommentForm slug={slug} submitLabel="ارسال نظر" />
+        <CommentForm slug={slug} submitLabel={t("articles.sendComment")} />
       </div>
     </section>
   );

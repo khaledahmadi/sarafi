@@ -1,5 +1,7 @@
 import { apiAction, apiRequest } from "@/lib/api/client";
 import type { ActionResult } from "@/lib/validation";
+import type { RateSourceId } from "@/lib/rate-sources";
+import { DEFAULT_RATE_SOURCE } from "@/lib/rate-sources";
 
 type DataArg<T> = { data: T };
 
@@ -232,10 +234,11 @@ export async function getAdminStats() {
   }>("/api/v1/admin/stats");
 }
 
-export async function listAdminCurrencies() {
+export async function listAdminCurrencies(source: RateSourceId = DEFAULT_RATE_SOURCE) {
   return apiRequest<
     Array<{
       id: string;
+      rate_source: string;
       code: string;
       name_fa: string;
       flag: string | null;
@@ -245,7 +248,7 @@ export async function listAdminCurrencies() {
       is_active: boolean;
       updated_at: string;
     }>
-  >("/api/v1/admin/currencies");
+  >(`/api/v1/admin/currencies?source=${encodeURIComponent(source)}`);
 }
 
 export async function listAdminServices() {
@@ -371,7 +374,11 @@ export async function listAdminFaqs() {
     Array<{
       id: string;
       question: string;
+      question_en: string | null;
+      question_ps: string | null;
       answer: string;
+      answer_en: string | null;
+      answer_ps: string | null;
       keywords: string | null;
       sort_order: number;
       is_active: boolean;

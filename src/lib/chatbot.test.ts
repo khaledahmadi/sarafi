@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   answerChat,
+  buildChatSuggestions,
   chatSuggestions,
   composeChatReply,
   detectChatIntent,
@@ -12,6 +13,7 @@ import {
 } from "./chatbot.ts";
 
 const context: ChatContext = {
+  locale: "fa",
   brandName: "صرافی سروری",
   tagline: "حواله و تبادل ارز",
   description: "خدمات حواله و نرخ لحظه‌ای",
@@ -88,4 +90,69 @@ test("chatSuggestions always includes live rates", () => {
   const chips = chatSuggestions(context.faqs);
   assert.equal(chips[0]?.text, "نرخ امروز اسعار چقدر است؟");
   assert.ok(chips.some((chip) => chip.text.includes("کارمزد")));
+});
+
+test("buildChatSuggestions uses locale messages and localized FAQ text", () => {
+  const chips = buildChatSuggestions(
+    [
+      {
+        id: "1",
+        question: "کارمزد حواله چقدر است؟",
+        question_en: "What is the transfer fee?",
+        answer: "کارمزد بسته به مقصد اعلام می‌شود.",
+        answer_en: "Fees depend on the destination.",
+        keywords: "fee",
+      },
+    ],
+    "en",
+    {
+      suggestRates: "Today's rates",
+      suggestRatesText: "What are today's exchange rates?",
+      suggestTransfer: "Transfer",
+      suggestTransferText: "How do I submit a transfer?",
+      suggestServices: "Services",
+      suggestServicesText: "What services do you offer?",
+      suggestBranches: "Branches",
+      suggestBranchesText: "Where are your branches?",
+    },
+  );
+  assert.equal(chips[0]?.text, "What are today's exchange rates?");
+  assert.ok(chips.some((chip) => chip.text === "What is the transfer fee?"));
+});
+
+test("buildChatSuggestions skips FAQ chips without active-locale text", () => {
+  const chips = buildChatSuggestions(
+    [
+      {
+        id: "1",
+        question: "کارمزد حواله چقدر است؟",
+        answer: "کارمزد بسته به مقصد اعلام می‌شود.",
+        keywords: "fee",
+      },
+    ],
+    "en",
+    {
+      suggestRates: "Today's rates",
+      suggestRatesText: "What are today's exchange rates?",
+      suggestTransfer: "Transfer",
+      suggestTransferText: "How do I submit a transfer?",
+      suggestServices: "Services",
+      suggestServicesText: "What services do you offer?",
+      suggestBranches: "Branches",
+      suggestBranchesText: "Where are your branches?",
+    },
+  );
+  assert.equal(chips.length, 4);
+  assert.ok(chips.every((chip) => !chip.text.includes("کارمزد")));
+});
+
+test("composeChatReply answers Pashto branch suggestions in Pashto", () => {
+  const reply = composeChatReply("ستاسو نمایندګۍ چیرته دي؟", { ...context, locale: "ps" });
+  assert.match(reply.text, /فعالې نمایندګۍ|مرکزي دفتر/);
+  assert.doesNotMatch(reply.text, /متوجه نشدم/);
+});
+
+test("replyToChat fallback uses active locale", () => {
+  const reply = replyToChat("FALLBACK", { ...context, locale: "en", faqs: [] });
+  assert.match(reply.text, /I didn't understand/);
 });

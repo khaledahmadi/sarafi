@@ -379,7 +379,11 @@ export type ServiceInput = z.infer<typeof serviceSchema>;
 export const faqSchema = z.object({
   id: uuidSchema.optional(),
   question: z.string().trim().min(3, "سؤال حداقل ۳ حرف باشد").max(200, "سؤال حداکثر ۲۰۰ حرف باشد"),
+  question_en: z.string().trim().max(200, "سؤال انگلیسی حداکثر ۲۰۰ حرف باشد").optional().or(z.literal("")),
+  question_ps: z.string().trim().max(200, "سؤال پشتو حداکثر ۲۰۰ حرف باشد").optional().or(z.literal("")),
   answer: z.string().trim().min(3, "پاسخ حداقل ۳ حرف باشد").max(2000, "پاسخ حداکثر ۲۰۰۰ حرف باشد"),
+  answer_en: z.string().trim().max(2000, "پاسخ انگلیسی حداکثر ۲۰۰۰ حرف باشد").optional().or(z.literal("")),
+  answer_ps: z.string().trim().max(2000, "پاسخ پشتو حداکثر ۲۰۰۰ حرف باشد").optional().or(z.literal("")),
   keywords: z.string().trim().max(300, "کلمات کلیدی حداکثر ۳۰۰ حرف باشد").optional().or(z.literal("")),
   sort_order: z.number().int("ترتیب باید عدد صحیح باشد").min(0).max(999),
   is_active: z.boolean(),

@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useLocale } from "@/i18n";
 import { logout, refreshSession } from "@/lib/api/auth";
 import { getAuthSnapshot, subscribeAuth } from "@/lib/api/auth-store";
 import { getLastActivity, trackActivity } from "@/lib/activity";
@@ -17,6 +18,7 @@ const WARN_BEFORE_MS = 2 * 60 * 1000;
 export function useSessionExpiry() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { t } = useLocale();
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const expiring = useRef(false);
 
@@ -56,7 +58,7 @@ export function useSessionExpiry() {
         /* fall through */
       }
       expiring.current = false;
-      await endSession("نشست شما به پایان رسید. لطفاً دوباره وارد شوید.");
+      await endSession(t("session.expired"));
     };
 
     const schedule = () => {
@@ -72,7 +74,7 @@ export function useSessionExpiry() {
 
       if (msLeft <= 0) {
         if (idleFirst) {
-          void endSession("به دلیل عدم فعالیت از حساب خارج شدید. برای ادامه دوباره وارد شوید.");
+          void endSession(t("session.idleLogout"));
         } else {
           void expireNow();
         }
@@ -83,10 +85,8 @@ export function useSessionExpiry() {
       if (warnIn > 0) {
         timers.current.push(
           setTimeout(() => {
-            toast.warning("نشست شما به‌زودی منقضی می‌شود", {
-              description: idleFirst
-                ? "این دستگاه مورد اعتماد نیست؛ با ادامه کار نشست تمدید می‌شود."
-                : "برای ادامه، فعالیت خود را ذخیره کنید یا دوباره وارد شوید.",
+            toast.warning(t("session.expiringSoon"), {
+              description: idleFirst ? t("session.untrustedWarn") : t("session.tokenWarn"),
             });
           }, warnIn),
         );
@@ -120,5 +120,5 @@ export function useSessionExpiry() {
       window.removeEventListener("focus", onFocus);
       unsubscribe();
     };
-  }, [navigate, queryClient]);
+  }, [navigate, queryClient, t]);
 }

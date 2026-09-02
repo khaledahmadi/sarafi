@@ -10,33 +10,27 @@ import {
 } from "@/components/site/ArticleBlog";
 import { PageHero } from "@/components/site/Sections";
 import { useSiteSettings } from "@/hooks/use-settings";
-import { site } from "@/lib/site";
-
-const title = `وبلاگ و مقالات آموزشی | ${site.name}`;
-const description =
-  "مقالات آموزشی درباره حواله یوان، شارژ علی‌پی، وی‌چت‌پی و تحلیل نرخ برابری اسعار.";
+import { pickLocalized, useLocale } from "@/i18n";
+import { pageMeta, resolvePageLocale } from "@/i18n/meta";
 
 export const Route = createFileRoute("/articles/")({
-  head: () => ({
-    meta: [
-      { title },
-      { name: "description", content: description },
-      { property: "og:title", content: title },
-      { property: "og:description", content: description },
-    ],
-  }),
   loader: async ({ context }) => {
+    const locale = await resolvePageLocale();
     await Promise.all([
       context.queryClient.ensureQueryData(articlesQuery),
       context.queryClient.ensureQueryData(settingsQuery),
     ]);
+    return { locale };
   },
+  head: ({ loaderData }) =>
+    pageMeta(loaderData?.locale ?? "fa", "meta.articlesTitle", "meta.articlesDescription"),
   component: ArticlesPage,
 });
 
 function ArticlesPage() {
   const { data: articles } = useSuspenseQuery(articlesQuery);
   const { get } = useSiteSettings();
+  const { locale, t } = useLocale();
   const hero = articles[0];
   const teasers = articles.slice(1, 4);
   const latest = articles.slice(4, 9);
@@ -49,22 +43,22 @@ function ArticlesPage() {
     <>
       <PageHero
         variant="soft"
-        eyebrow="وبلاگ"
-        title={get("home.articles_title", "راهنما و اخبار بازار ارز")}
-        description={description}
+        eyebrow={t("articles.title")}
+        title={get("home.articles_title", t("articles.title"))}
+        description={t("meta.articlesDescription")}
       />
       <div className="bg-muted/30">
         <div className="mx-auto max-w-7xl space-y-4 px-4 py-4 sm:space-y-5 sm:px-5 sm:py-5 lg:space-y-7 lg:px-6 lg:py-6">
         <div className="flex w-full items-center justify-start gap-3 border-b border-dashed border-border pb-3">
           <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary ring-4 ring-primary/15" aria-hidden="true" />
           <h2 className="text-2xl font-semibold leading-tight tracking-tight sm:text-3xl md:text-[2rem]">
-            مقالات و راهنماها
+            {t("articles.title")}
           </h2>
         </div>
 
         {articles.length === 0 ? (
           <div className="rounded-2xl border border-border bg-card px-6 py-10 text-center text-muted-foreground shadow-sm">
-            مقاله‌ای منتشر نشده است.
+            {t("articles.noArticles")}
           </div>
         ) : (
           <>
@@ -79,8 +73,8 @@ function ArticlesPage() {
                           <ArticleCard
                             key={article.slug}
                             slug={article.slug}
-                            title={article.title_fa}
-                            excerpt={article.excerpt_fa}
+                            title={pickLocalized(article, "title", locale)}
+                            excerpt={pickLocalized(article, "excerpt", locale)}
                             coverUrl={article.cover_url}
                             publishedAt={article.published_at}
                             heading="h3"
@@ -101,7 +95,7 @@ function ArticlesPage() {
 
             {moreRows.map((row, index) => (
               <section key={row[0]?.slug ?? index}>
-                {index === 0 ? <ArticleSectionHeading>سایر مقالات</ArticleSectionHeading> : null}
+                {index === 0 ? <ArticleSectionHeading>{t("articles.otherArticles")}</ArticleSectionHeading> : null}
                 <ArticleFourUp articles={row} />
               </section>
             ))}
