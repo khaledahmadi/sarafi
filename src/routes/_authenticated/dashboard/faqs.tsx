@@ -9,16 +9,16 @@ import { TextAreaField, TextField } from "@/components/site/Field";
 import { DataTable } from "@/components/ui/data-table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRoles } from "@/hooks/use-session";
+import { useLocale } from "@/i18n";
 import { deleteFaq, listAdminFaqs, saveFaq } from "@/lib/portal.functions";
 import { faqSchema, fieldErrorMap } from "@/lib/validation";
-import { faNum, site } from "@/lib/site";
+import { site } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/dashboard/faqs")({
   head: () => ({
     meta: [
-      { title: `سؤالات متداول | ${site.name}` },
-      { name: "description", content: "مدیریت پرسش‌نامه و پاسخ‌های گفتگوی سایت." },
+      { title: `FAQ | ${site.name}` },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -42,6 +42,7 @@ const emptyForm: FormState = {
 
 function FaqsAdminPage() {
   const { isStaff } = useRoles();
+  const { t, n } = useLocale();
   const queryClient = useQueryClient();
   const [form, setForm] = useState<FormState>(emptyForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -75,7 +76,7 @@ function FaqsAdminPage() {
       });
       if (!parsed.success) {
         setErrors(fieldErrorMap(parsed.error));
-        throw new Error("اطلاعات وارد شده کامل نیست");
+        throw new Error(t("admin.formIncomplete"));
       }
       setErrors({});
       return saveFaq({ data: payload });
@@ -86,7 +87,7 @@ function FaqsAdminPage() {
         toast.error(result.message);
         return;
       }
-      toast.success(form.id ? "سؤال ویرایش شد" : "سؤال جدید ثبت شد");
+      toast.success(form.id ? t("admin.faqsSaved") : t("admin.faqsCreated"));
       setForm(emptyForm);
       invalidate();
     },
@@ -100,37 +101,40 @@ function FaqsAdminPage() {
         toast.error(result.message);
         return;
       }
-      toast.success("سؤال حذف شد");
+      toast.success(t("admin.faqsDeleted"));
       setForm((prev) => (prev.id ? emptyForm : prev));
       invalidate();
     },
-    onError: () => toast.error("حذف سؤال ممکن نشد"),
+    onError: () => toast.error(t("admin.faqsDeleteFailed")),
   });
 
   const rows = useMemo(() => faqs.data ?? [], [faqs.data]);
   const activeCount = rows.filter((row) => row.is_active).length;
-  const columns = createFaqColumns({
-    editingId: form.id ?? null,
-    onEdit: (row) => {
-      setErrors({});
-      setForm({
-        id: row.id,
-        question: row.question,
-        answer: row.answer,
-        keywords: row.keywords ?? "",
-        is_active: row.is_active,
-      });
-    },
-    onDelete: setPendingDelete,
-  });
+  const columns = useMemo(
+    () =>
+      createFaqColumns({
+        t,
+        editingId: form.id ?? null,
+        onEdit: (row) => {
+          setErrors({});
+          setForm({
+            id: row.id,
+            question: row.question,
+            answer: row.answer,
+            keywords: row.keywords ?? "",
+            is_active: row.is_active,
+          });
+        },
+        onDelete: setPendingDelete,
+      }),
+    [t, form.id],
+  );
 
   if (!isStaff) {
     return (
       <div className="p-6 card-elevated">
-        <h1 className="text-lg font-bold">دسترسی محدود</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          مدیریت سؤالات متداول تنها برای کارمندان و مدیران سیستم در دسترس است.
-        </p>
+        <h1 className="text-lg font-bold">{t("admin.accessDeniedTitle")}</h1>
+        <p className="mt-2 text-sm text-muted-foreground">{t("admin.faqsAccess")}</p>
       </div>
     );
   }
@@ -138,21 +142,31 @@ function FaqsAdminPage() {
   return (
     <div className="space-y-6">
       <header>
-        <p className="text-xs font-semibold text-primary">مدیریت محتوا</p>
-        <h1 className="mt-1 text-2xl font-extrabold">سؤالات متداول</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          سؤال و پاسخ اضافه کنید تا در صفحه عمومی و گفتگوی سایت نمایش داده شود.
-        </p>
+        <h1 className="text-2xl font-extrabold">{t("admin.faqsTitle")}</h1>
+        <p className="mt-2 text-sm text-muted-foreground">{t("admin.faqsSubtitle")}</p>
       </header>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <StatCard label="همه سؤال‌ها" value={rows.length} loading={faqs.isLoading} icon={CircleHelp} />
-        <StatCard label="نمایش عمومی" value={activeCount} loading={faqs.isLoading} icon={Eye} />
         <StatCard
-          label="غیرفعال"
+          label={t("admin.faqsAll")}
+          value={rows.length}
+          loading={faqs.isLoading}
+          icon={CircleHelp}
+          n={n}
+        />
+        <StatCard
+          label={t("admin.faqsPublic")}
+          value={activeCount}
+          loading={faqs.isLoading}
+          icon={Eye}
+          n={n}
+        />
+        <StatCard
+          label={t("admin.inactive")}
           value={rows.length - activeCount}
           loading={faqs.isLoading}
           icon={EyeOff}
+          n={n}
         />
       </div>
 
@@ -162,9 +176,9 @@ function FaqsAdminPage() {
             columns={columns}
             data={rows}
             searchKey="search"
-            searchPlaceholder="جست‌وجو در سؤال، پاسخ یا کلمات کلیدی…"
+            searchPlaceholder={t("admin.faqsSearchPh")}
             loading={faqs.isLoading}
-            emptyLabel="هنوز سؤالی ثبت نشده است."
+            emptyLabel={t("admin.faqsEmpty")}
           />
         </section>
 
@@ -175,28 +189,30 @@ function FaqsAdminPage() {
           }}
           className="h-fit space-y-4 p-5 card-elevated"
         >
-          <h2 className="text-base font-bold">{form.id ? "ویرایش سؤال" : "افزودن سؤال"}</h2>
+          <h2 className="text-base font-bold">
+            {form.id ? t("admin.faqsEdit") : t("admin.faqsAdd")}
+          </h2>
           <TextField
-            label="سؤال"
+            label={t("admin.faqsQuestion")}
             value={form.question}
             error={errors.question}
             onChange={(event) => setForm((prev) => ({ ...prev, question: event.target.value }))}
-            placeholder="کارمزد حواله چقدر است؟"
+            placeholder={t("admin.faqsQuestionPh")}
           />
           <TextAreaField
-            label="پاسخ"
+            label={t("admin.faqsAnswer")}
             value={form.answer}
             error={errors.answer}
             onChange={(event) => setForm((prev) => ({ ...prev, answer: event.target.value }))}
-            placeholder="پاسخ را برای مشتری و گفتگوی سایت بنویسید"
+            placeholder={t("admin.faqsAnswerPh")}
           />
           <TextField
-            label="کلمات کلیدی"
-            hint="با ویرگول جدا کنید تا گفتگو راحت‌تر این سؤال را پیدا کند"
+            label={t("admin.faqsKeywords")}
+            hint={t("admin.faqsKeywordsHint")}
             value={form.keywords}
             error={errors.keywords}
             onChange={(event) => setForm((prev) => ({ ...prev, keywords: event.target.value }))}
-            placeholder="کارمزد، کمیسیون"
+            placeholder={t("admin.faqsKeywordsPh")}
           />
           <label className="flex items-center gap-2 text-sm">
             <input
@@ -205,7 +221,7 @@ function FaqsAdminPage() {
               onChange={(event) => setForm((prev) => ({ ...prev, is_active: event.target.checked }))}
               className="size-4 accent-primary"
             />
-            نمایش در سایت و گفتگو
+            {t("admin.faqsShowChat")}
           </label>
           <div className="flex flex-wrap gap-2 pt-1">
             <button
@@ -214,7 +230,11 @@ function FaqsAdminPage() {
               className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground disabled:opacity-60"
             >
               <Plus className="size-4" />
-              {save.isPending ? "در حال ذخیره…" : form.id ? "ذخیره تغییرات" : "ثبت سؤال"}
+              {save.isPending
+                ? t("admin.saving")
+                : form.id
+                  ? t("admin.saveChanges")
+                  : t("admin.faqsRegister")}
             </button>
             {form.id ? (
               <button
@@ -225,7 +245,7 @@ function FaqsAdminPage() {
                 }}
                 className="rounded-lg border border-border px-4 py-2.5 text-sm font-semibold"
               >
-                لغو ویرایش
+                {t("admin.cancelEdit")}
               </button>
             ) : null}
           </div>
@@ -234,9 +254,9 @@ function FaqsAdminPage() {
 
       <ConfirmDeleteDialog
         open={Boolean(pendingDelete)}
-        title="حذف سؤال"
+        title={t("admin.faqsDeleteTitle")}
         itemName={pendingDelete?.question}
-        description="این سؤال از صفحه عمومی و گفتگوی سایت برداشته می‌شود و دیگر قابل بازیابی نیست."
+        description={t("admin.faqsDeleteDesc")}
         pending={remove.isPending}
         onOpenChange={(open) => !open && setPendingDelete(null)}
         onConfirm={() => {
@@ -253,18 +273,20 @@ function StatCard({
   value,
   loading,
   icon: Icon,
+  n,
 }: {
   label: string;
   value: number;
   loading: boolean;
   icon: typeof CircleHelp;
+  n: (value: number, digits?: number) => string;
 }) {
   return (
     <div className="flex items-center justify-between gap-3 p-3 card-elevated">
       <div>
         <p className="text-xs font-medium text-muted-foreground">{label}</p>
         <div className="mt-1 text-lg font-extrabold">
-          {loading ? <Skeleton className="h-6 w-10" /> : faNum(value, 0)}
+          {loading ? <Skeleton className="h-6 w-10" /> : n(value, 0)}
         </div>
       </div>
       <span className={cn("grid size-8 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary")}>

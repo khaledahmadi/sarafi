@@ -3,7 +3,6 @@ import { Link } from "@tanstack/react-router";
 import {
   ChevronDown,
   Clock,
-  ExternalLink,
   LogOut,
   ShieldCheck,
   User,
@@ -11,15 +10,20 @@ import {
 import { useSession } from "@/hooks/use-session";
 import { useSignOut } from "@/hooks/use-sign-out";
 import { useSessionCountdown } from "@/hooks/use-session-countdown";
-import { site } from "@/lib/site";
+import { useSiteSettings } from "@/hooks/use-settings";
+import { LanguageSwitcher, useLocale } from "@/i18n";
+import { BrandMark } from "@/components/site/BrandMark";
 
 /** Header for the private dashboard, separate from the public site. */
 export function AppHeader() {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  const { user } = useSession();
+  const { user, ready } = useSession();
   const { signOut, signingOut } = useSignOut();
   const countdown = useSessionCountdown();
+  const { get } = useSiteSettings();
+  const { t } = useLocale();
+  const brandName = get("brand.name");
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -31,35 +35,40 @@ export function AppHeader() {
   }, [menuOpen]);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-card/95 backdrop-blur">
+    <header className="sticky top-0 z-50 border-b border-sidebar-border bg-sidebar text-sidebar-foreground">
       <div className="flex h-[var(--app-header-height)] items-center justify-between gap-3 px-4 sm:px-6">
         <div className="flex items-center gap-4">
           <Link to="/dashboard" className="flex items-center gap-2.5">
-            <span className="grid size-9 place-items-center rounded-xl bg-accent text-base font-extrabold text-accent-foreground">
-              س
-            </span>
+            <BrandMark size="size-9" />
             <span className="flex flex-col leading-tight">
-              <span className="text-sm font-bold">{site.name}</span>
-              <span className="text-[11px] text-muted-foreground">داشبورد</span>
+              <span className="text-sm font-bold">{brandName}</span>
+              <span className="text-[11px] text-sidebar-foreground/70">
+                {t("appHeader.dashboard")}
+              </span>
             </span>
           </Link>
         </div>
 
         <div className="flex items-center gap-2">
-          <a
-            href="/"
-            className="hidden items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground sm:flex"
-          >
-            <ExternalLink className="size-3.5" /> سایت عمومی
-          </a>
+          <LanguageSwitcher compact variant="dark" />
 
-          {user && (
+          {!ready ? (
+            <span
+              className="flex items-center gap-2 rounded-lg bg-sidebar-accent px-3 py-2"
+              aria-label={t("common.sessionChecking")}
+              aria-busy="true"
+            >
+              <span className="size-4 shrink-0 animate-pulse rounded bg-sidebar-foreground/20" />
+              <span className="inline-block h-4 w-[9rem] animate-pulse rounded bg-sidebar-foreground/20" />
+              <span className="size-4 shrink-0 animate-pulse rounded bg-sidebar-foreground/20" />
+            </span>
+          ) : user ? (
             <div className="relative" ref={menuRef}>
               <button
                 onClick={() => setMenuOpen((v) => !v)}
                 aria-haspopup="menu"
                 aria-expanded={menuOpen}
-                className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-sm font-semibold transition-colors hover:bg-muted/70"
+                className="flex items-center gap-2 rounded-lg bg-sidebar-accent px-3 py-2 text-sm font-semibold transition-colors hover:bg-sidebar-accent/80"
               >
                 <User className="size-4" />
                 <span className="max-w-[9rem] truncate">{user.email}</span>
@@ -79,7 +88,9 @@ export function AppHeader() {
                         <div className="mt-2 flex items-center justify-between gap-2 text-xs">
                           <span className="flex items-center gap-1.5 text-muted-foreground">
                             <Clock className="size-3.5" />
-                            {countdown.idleLimited ? "مهلت بی‌فعالیتی" : "اعتبار نشست"}
+                            {countdown.idleLimited
+                              ? t("appHeader.idleDeadline")
+                              : t("appHeader.sessionValid")}
                           </span>
                           <span
                             aria-live="polite"
@@ -96,27 +107,31 @@ export function AppHeader() {
                           }`}
                         >
                           <ShieldCheck className="size-3" />
-                          {countdown.trusted ? "دستگاه مورد اعتماد" : "دستگاه عمومی"}
+                          {countdown.trusted
+                            ? t("appHeader.trustedDevice")
+                            : t("appHeader.publicDevice")}
                         </span>
                       </>
                     )}
                   </div>
 
-                  <button
-                    onClick={() => {
-                      setMenuOpen(false);
-                      void signOut();
-                    }}
-                    disabled={signingOut}
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold text-destructive hover:bg-destructive/10 disabled:opacity-60"
-                  >
-                    <LogOut className="size-4" />
-                    {signingOut ? "در حال خروج…" : "خروج از حساب"}
-                  </button>
+                  <div className="flex flex-col gap-1 pt-1">
+                    <button
+                      onClick={() => {
+                        setMenuOpen(false);
+                        void signOut();
+                      }}
+                      disabled={signingOut}
+                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold text-destructive hover:bg-destructive/10 disabled:opacity-60"
+                    >
+                      <LogOut className="size-4" />
+                      {signingOut ? t("common.signingOut") : t("common.signOut")}
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
-          )}
+          ) : null}
         </div>
       </div>
     </header>

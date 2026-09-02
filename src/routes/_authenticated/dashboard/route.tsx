@@ -1,15 +1,17 @@
 import { createFileRoute, Navigate, Outlet } from "@tanstack/react-router";
 import { useRoles } from "@/hooks/use-session";
-import { site } from "@/lib/site";
+import { pageMeta, resolvePageLocale } from "@/i18n/meta";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   ssr: false,
-  head: () => ({
-    meta: [
-      { title: `داشبورد | ${site.name}` },
-      { name: "robots", content: "noindex" },
-    ],
-  }),
+  loader: async () => ({ locale: await resolvePageLocale() }),
+  head: ({ loaderData }) => {
+    const base = pageMeta(loaderData?.locale ?? "fa", "meta.dashboardTitle");
+    return {
+      ...base,
+      meta: [...base.meta, { name: "robots", content: "noindex" }],
+    };
+  },
   pendingMs: 0,
   component: ManageLayout,
 });
