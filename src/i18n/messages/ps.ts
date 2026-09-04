@@ -64,6 +64,9 @@ export const ps: Messages = {
     optional: "اختیاري",
     openManageMenu: "د مدیریت مینو پرانیستل",
     closeManageMenu: "د مدیریت مینو بندول",
+    openMenu: "مینو پرانیستل",
+    closeMenu: "مینو بندول",
+    mainMenu: "اصلي مینو",
   },
   icons: {
     send: "لېږل",

@@ -64,6 +64,9 @@ export const en: Messages = {
     optional: "optional",
     openManageMenu: "Open manage menu",
     closeManageMenu: "Close manage menu",
+    openMenu: "Open menu",
+    closeMenu: "Close menu",
+    mainMenu: "Main menu",
   },
   icons: {
     send: "Send",
