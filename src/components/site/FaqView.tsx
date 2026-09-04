@@ -145,8 +145,8 @@ export function FaqView() {
                           className={cn(
                             "mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg text-xs font-extrabold",
                             openId === faq.id
-                              ? "bg-primary text-accent"
-                              : "bg-primary/8 text-primary",
+                              ? "icon-tile"
+                              : "icon-badge",
                           )}
                         >
                           {n(index + 1, 0)}
@@ -183,7 +183,7 @@ export function FaqView() {
 
           <aside className="space-y-4 lg:sticky lg:top-24">
             <div className="p-6 card-elevated">
-              <span className="grid size-11 place-items-center rounded-xl bg-primary text-accent">
+              <span className="icon-tile size-11 rounded-xl">
                 <CircleHelp className="size-5" />
               </span>
               <h2 className="mt-4 text-lg font-bold">{t("faq.stillNeedHelp")}</h2>
@@ -192,7 +192,7 @@ export function FaqView() {
               <ul className="mt-5 space-y-4 text-sm">
                 {hours ? (
                   <li className="flex items-start gap-3">
-                    <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/8 text-primary">
+                    <span className="icon-badge size-10 rounded-xl">
                       <Clock className="size-4" />
                     </span>
                     <div>
@@ -203,7 +203,7 @@ export function FaqView() {
                 ) : null}
                 {phone ? (
                   <li className="flex items-start gap-3">
-                    <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/8 text-primary">
+                    <span className="icon-badge size-10 rounded-xl">
                       <Phone className="size-4" />
                     </span>
                     <div>
@@ -288,7 +288,7 @@ function EmptyCard({
 }) {
   return (
     <div className="px-6 py-12 text-center card-elevated">
-      <span className="mx-auto grid size-12 place-items-center rounded-xl bg-primary/8 text-primary">
+      <span className="mx-auto icon-badge size-12 rounded-xl">
         <CircleHelp className="size-5" />
       </span>
       <h3 className="mt-4 text-lg font-bold">{title}</h3>

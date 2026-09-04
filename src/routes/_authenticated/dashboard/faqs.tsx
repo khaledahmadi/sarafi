@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useRoles } from "@/hooks/use-session";
 import { useLocale } from "@/i18n";
 import { deleteFaq, listAdminFaqs, saveFaq } from "@/lib/portal.functions";
-import { faqSchema, fieldErrorMap } from "@/lib/validation";
+import { faqSchema, fieldErrorMap, translateFieldErrors, resolveValidationMessage } from "@/lib/validation";
 import { site } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
@@ -75,7 +75,7 @@ function FaqsAdminPage() {
         keywords: state.keywords,
       });
       if (!parsed.success) {
-        setErrors(fieldErrorMap(parsed.error));
+        setErrors(fieldErrorMap(parsed.error, t));
         throw new Error(t("admin.formIncomplete"));
       }
       setErrors({});
@@ -83,8 +83,8 @@ function FaqsAdminPage() {
     },
     onSuccess: (result) => {
       if (!result.ok) {
-        setErrors(result.fieldErrors ?? {});
-        toast.error(result.message);
+        setErrors(translateFieldErrors(result.fieldErrors, t));
+        toast.error(resolveValidationMessage(result.message ?? "validation.operationFailed", t));
         return;
       }
       toast.success(form.id ? t("admin.faqsSaved") : t("admin.faqsCreated"));
@@ -98,7 +98,7 @@ function FaqsAdminPage() {
     mutationFn: (id: string) => deleteFaq({ data: { id } }),
     onSuccess: (result) => {
       if (!result.ok) {
-        toast.error(result.message);
+        toast.error(resolveValidationMessage(result.message ?? "validation.operationFailed", t));
         return;
       }
       toast.success(t("admin.faqsDeleted"));
@@ -195,14 +195,14 @@ function FaqsAdminPage() {
           <TextField
             label={t("admin.faqsQuestion")}
             value={form.question}
-            error={errors.question}
+            error={errors["question"]}
             onChange={(event) => setForm((prev) => ({ ...prev, question: event.target.value }))}
             placeholder={t("admin.faqsQuestionPh")}
           />
           <TextAreaField
             label={t("admin.faqsAnswer")}
             value={form.answer}
-            error={errors.answer}
+            error={errors["answer"]}
             onChange={(event) => setForm((prev) => ({ ...prev, answer: event.target.value }))}
             placeholder={t("admin.faqsAnswerPh")}
           />
@@ -210,7 +210,7 @@ function FaqsAdminPage() {
             label={t("admin.faqsKeywords")}
             hint={t("admin.faqsKeywordsHint")}
             value={form.keywords}
-            error={errors.keywords}
+            error={errors["keywords"]}
             onChange={(event) => setForm((prev) => ({ ...prev, keywords: event.target.value }))}
             placeholder={t("admin.faqsKeywordsPh")}
           />
@@ -289,7 +289,7 @@ function StatCard({
           {loading ? <Skeleton className="h-6 w-10" /> : n(value, 0)}
         </div>
       </div>
-      <span className={cn("grid size-8 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary")}>
+      <span className={cn("icon-badge size-8 rounded-lg")}>
         <Icon className="size-3.5" />
       </span>
     </div>

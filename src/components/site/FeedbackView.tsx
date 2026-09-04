@@ -8,7 +8,7 @@ import { PageHero } from "@/components/site/Sections";
 import { Button } from "@/components/ui/button";
 import { useSession } from "@/hooks/use-session";
 import { createFeedback, listPublicFeedback } from "@/lib/public.functions";
-import { fieldErrorMap, feedbackSchema } from "@/lib/validation";
+import { fieldErrorMap, feedbackSchema, resolveValidationMessage, translateFieldErrors } from "@/lib/validation";
 import { useLocale } from "@/i18n";
 import { cn } from "@/lib/utils";
 
@@ -34,8 +34,8 @@ export function FeedbackView() {
       }),
     onSuccess: (result) => {
       if (!result.ok) {
-        setErrors(result.fieldErrors ?? {});
-        toast.error(result.message);
+        setErrors(translateFieldErrors(result.fieldErrors, t));
+        toast.error(resolveValidationMessage(result.message ?? "validation.formInvalid", t));
         return;
       }
       setForm(emptyForm);
@@ -55,7 +55,7 @@ export function FeedbackView() {
     event.preventDefault();
     const parsed = feedbackSchema(Boolean(user)).safeParse(form);
     if (!parsed.success) {
-      setErrors(fieldErrorMap(parsed.error));
+      setErrors(fieldErrorMap(parsed.error, t));
       toast.error(t("feedback.formInvalid"));
       return;
     }

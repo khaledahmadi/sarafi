@@ -18,7 +18,7 @@ import {
 } from "@/lib/portal.functions";
 import { ratesQuery } from "@/lib/queries";
 import { useRateSource } from "@/hooks/use-rate-source";
-import { fieldErrorMap, friendlyError, parseNum, transferSchema, transferStatuses } from "@/lib/validation";
+import { fieldErrorMap, friendlyError, parseNum, transferSchema, transferStatuses, translateFieldErrors, resolveValidationMessage } from "@/lib/validation";
 import { site } from "@/lib/site";
 import { useLocale } from "@/i18n";
 import { pageMeta, resolvePageLocale } from "@/i18n/meta";
@@ -122,15 +122,15 @@ function TransfersPage() {
       const payload = { ...form, amount: parseNum(form.amount) };
       const parsed = transferSchema.safeParse(payload);
       if (!parsed.success) {
-        setErrors(fieldErrorMap(parsed.error));
+        setErrors(fieldErrorMap(parsed.error, t));
         throw new Error(t("common.formInvalid"));
       }
       const result = form.id
         ? await updateTransfer({ data: { id: form.id, ...parsed.data } })
         : await createTransfer({ data: parsed.data });
       if (!result.ok) {
-        setErrors(result.fieldErrors ?? {});
-        throw new Error(result.message);
+        setErrors(translateFieldErrors(result.fieldErrors, t));
+        throw new Error(resolveValidationMessage(result.message ?? "validation.operationFailed", t));
       }
       setErrors({});
       return result.data;
@@ -146,14 +146,14 @@ function TransfersPage() {
       setForm(emptyForm);
       invalidate();
     },
-    onError: (error: Error) => toast.error(error.message || friendlyError(undefined)),
+    onError: (error: Error) => toast.error(error.message || friendlyError(undefined, t)),
   });
 
   const remove = useMutation({
     mutationFn: (id: string) => deleteTransfer({ data: { id } }),
     onSuccess: (result) => {
       if (!result.ok) {
-        toast.error(result.message);
+        toast.error(resolveValidationMessage(result.message ?? "validation.operationFailed", t));
         return;
       }
       toast.success(t("admin.transfersDeleted"));
@@ -166,7 +166,7 @@ function TransfersPage() {
   const setStatus = useMutation({
     mutationFn: async (vars: { id: string; status: string }) => {
       const result = await updateTransferStatus({ data: vars });
-      if (!result.ok) throw new Error(result.message);
+      if (!result.ok) throw new Error(resolveValidationMessage(result.message ?? "validation.operationFailed", t));
     },
     onSuccess: () => {
       toast.success(t("admin.transfersStatusUpdated"));
@@ -178,7 +178,7 @@ function TransfersPage() {
   const setNote = useMutation({
     mutationFn: async (vars: { id: string; staff_note: string }) => {
       const result = await updateTransferNote({ data: vars });
-      if (!result.ok) throw new Error(result.message);
+      if (!result.ok) throw new Error(resolveValidationMessage(result.message ?? "validation.operationFailed", t));
     },
     onSuccess: () => {
       toast.success(t("admin.transfersNoteSaved"));
@@ -259,7 +259,7 @@ function TransfersPage() {
                     <p className="font-mono text-xs text-muted-foreground" dir="ltr">
                       {item.reference}
                       {form.id === item.id && (
-                        <span className="ms-2 rounded-full bg-accent/20 px-2 py-0.5 text-[10px] font-bold text-accent-foreground">
+                        <span className="ms-2 rounded-full soft-badge-accent px-2 py-0.5 text-[10px] font-bold">
                           {t("common.editing")}
                         </span>
                       )}

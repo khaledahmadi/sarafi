@@ -22,7 +22,8 @@ import { AppSelect, SelectField, TextAreaField, TextField } from "@/components/s
 import { fieldClass, labelClass } from "@/lib/forms";
 import { deleteService, listAdminServices, saveService } from "@/lib/portal.functions";
 import { getServiceIcon, getServiceIconLabel, getServiceIconOptions } from "@/lib/service-icons";
-import { fieldErrorMap, serviceSchema, uniqueSlug } from "@/lib/validation";
+import { ACTIONS_CELL_CONTENT, ACTIONS_COLUMN_ALIGN } from "@/lib/data-table";
+import { fieldErrorMap, serviceSchema, translateFieldErrors, uniqueSlug, resolveValidationMessage } from "@/lib/validation";
 import { site } from "@/lib/site";
 
 export const Route = createFileRoute("/_authenticated/dashboard/services")({
@@ -70,7 +71,7 @@ function ServiceIconLabel({ name }: { name: string }) {
 }
 
 function ServicesManagePage() {
-  const { t, n, d } = useLocale();
+  const { t, n, d, dir } = useLocale();
   const sortLabels: Record<SortKey, string> = {
     title_fa: t("admin.sortService"),
     icon: t("admin.sortIcon"),
@@ -126,7 +127,7 @@ function ServicesManagePage() {
       };
       const parsed = serviceSchema.safeParse(payload);
       if (!parsed.success) {
-        setErrors(fieldErrorMap(parsed.error));
+        setErrors(fieldErrorMap(parsed.error, t));
         throw new Error(t("admin.formIncomplete"));
       }
       setErrors({});
@@ -134,8 +135,8 @@ function ServicesManagePage() {
     },
     onSuccess: (result) => {
       if (!result.ok) {
-        setErrors(result.fieldErrors ?? {});
-        toast.error(result.message);
+        setErrors(translateFieldErrors(result.fieldErrors, t));
+        toast.error(resolveValidationMessage(result.message ?? "validation.operationFailed", t));
         return;
       }
       toast.success(form.id ? t("admin.servicesSaved") : t("admin.servicesCreated"));
@@ -149,7 +150,7 @@ function ServicesManagePage() {
     mutationFn: (id: string) => deleteService({ data: { id } }),
     onSuccess: (result) => {
       if (!result.ok) {
-        toast.error(result.message);
+        toast.error(resolveValidationMessage(result.message ?? "validation.operationFailed", t));
         return;
       }
       toast.success(t("admin.servicesDeleted"));
@@ -281,7 +282,7 @@ function ServicesManagePage() {
       <div className="grid gap-3 sm:grid-cols-3">
         {stats.map((stat) => (
           <div key={stat.label} className="flex items-center gap-3 p-4 card-elevated">
-            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+            <span className="icon-badge size-10 rounded-xl">
               <stat.icon className="size-5" />
             </span>
             <div>
@@ -303,7 +304,7 @@ function ServicesManagePage() {
                 <Search className="pointer-events-none absolute end-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <input
                   id="service-search"
-                  dir="rtl"
+                  dir={dir}
                   className={`${fieldClass} pe-10`}
                   placeholder={t("admin.servicesSearchPh")}
                   value={search}
@@ -367,7 +368,9 @@ function ServicesManagePage() {
           </p>
 
           <div className="overflow-x-auto card-elevated">
-            <table className="w-full min-w-[46rem] text-right text-sm">
+            <table
+              className={`w-full min-w-[46rem] text-sm ${dir === "ltr" ? "text-left" : "text-right"}`}
+            >
               <thead className="bg-secondary/80">
                 <tr>
                   {(["title_fa", "icon", "sort_order", "is_active"] as SortKey[]).map(
@@ -392,7 +395,9 @@ function ServicesManagePage() {
                       </th>
                     ),
                   )}
-                  <th className="px-4 py-3 font-semibold">{t("common.actions")}</th>
+                  <th className={`px-4 py-3 font-semibold ${ACTIONS_COLUMN_ALIGN}`}>
+                    {t("common.actions")}
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -405,15 +410,36 @@ function ServicesManagePage() {
                 )}
                 {paginated.map((service) => {
                   const deleting = remove.isPending && remove.variables === service.id;
+                  const actionsCell = (
+                    <td className={`px-4 py-3 whitespace-nowrap ${ACTIONS_COLUMN_ALIGN}`}>
+                      <div className={ACTIONS_CELL_CONTENT}>
+                        <button
+                          type="button"
+                          onClick={() => startEdit(service)}
+                          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold"
+                        >
+                          <Pencil className="size-3.5" /> {t("common.edit")}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={deleting}
+                          onClick={() => setPendingDelete(service)}
+                          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-destructive/40 px-3 py-1.5 text-xs font-semibold text-destructive disabled:opacity-60"
+                        >
+                          <Trash2 className="size-3.5" /> {t("common.delete")}
+                        </button>
+                      </div>
+                    </td>
+                  );
                   return (
                     <tr
                       key={service.id}
                       className="border-t border-border transition hover:bg-secondary/40"
                     >
-                      <td className="px-4 py-3">
+                                            <td className="px-4 py-3">
                         <span className="font-semibold">{service.title_fa}</span>
                         {form.id === service.id && (
-                          <span className="ms-2 rounded-full bg-accent/20 px-2 py-0.5 text-[10px] font-bold text-accent-foreground">
+                          <span className="ms-2 rounded-full soft-badge-accent px-2 py-0.5 text-[10px] font-bold">
                             {t("admin.editing")}
                           </span>
                         )}
@@ -429,32 +455,14 @@ function ServicesManagePage() {
                         <span
                           className={`rounded-full border px-2.5 py-1 text-xs font-bold ${
                             service.is_active
-                              ? "bg-primary/10 text-primary border-primary/30"
+                              ? "soft-badge-success border"
                               : "bg-secondary text-secondary-foreground border-border"
                           }`}
                         >
                           {service.is_active ? statusLabels.active : statusLabels.inactive}
                         </span>
                       </td>
-                      <td className="px-4 py-3">
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={() => startEdit(service)}
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold"
-                          >
-                            <Pencil className="size-3.5" /> {t("common.edit")}
-                          </button>
-                          <button
-                            type="button"
-                            disabled={deleting}
-                            onClick={() => setPendingDelete(service)}
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-destructive/40 px-3 py-1.5 text-xs font-semibold text-destructive disabled:opacity-60"
-                          >
-                            <Trash2 className="size-3.5" /> {t("common.delete")}
-                          </button>
-                        </div>
-                      </td>
+                      {actionsCell}
                     </tr>
                   );
                 })}

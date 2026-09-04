@@ -57,7 +57,7 @@ export function RateSourcePicker({
               className={cn(
                 "min-h-11 flex-1 rounded-lg px-3 py-2.5 font-semibold transition-all duration-200",
                 active
-                  ? "bg-primary text-primary-foreground shadow-sm"
+                  ? "bg-accent text-accent-foreground shadow-sm"
                   : "text-muted-foreground hover:bg-background/60 hover:text-foreground",
               )}
             >

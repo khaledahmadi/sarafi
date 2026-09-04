@@ -10,6 +10,7 @@ import { DataTable } from "@/components/ui/data-table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRoles } from "@/hooks/use-session";
 import { useLocale } from "@/i18n";
+import { resolveValidationMessage } from "@/lib/validation";
 import {
   filterComments,
   isCommentStatusFilter,
@@ -73,7 +74,7 @@ function CommentsAdminPage() {
     mutationFn: (id: string) => approveComment({ data: { id } }),
     onSuccess: (result) => {
       if (!result.ok) {
-        toast.error(result.message);
+        toast.error(resolveValidationMessage(result.message ?? "validation.operationFailed", t));
         return;
       }
       toast.success(t("admin.commentApproved"));
@@ -86,7 +87,7 @@ function CommentsAdminPage() {
     mutationFn: (id: string) => deleteComment({ data: { id } }),
     onSuccess: (result) => {
       if (!result.ok) {
-        toast.error(result.message);
+        toast.error(resolveValidationMessage(result.message ?? "validation.operationFailed", t));
         return;
       }
       toast.success(t("admin.commentDeleted"));
@@ -224,7 +225,7 @@ function StatCard({
     <div
       className={cn(
         "flex items-center justify-between gap-3 p-3 card-elevated",
-        tone === "alert" && "border-warning/40 bg-warning/5",
+        tone === "alert" && "border-warning/50 bg-[var(--soft-warning-bg)]",
       )}
     >
       <div>
@@ -235,8 +236,8 @@ function StatCard({
       </div>
       <span
         className={cn(
-          "grid size-8 shrink-0 place-items-center rounded-lg",
-          tone === "alert" ? "bg-warning/20 text-warning-foreground" : "bg-primary/10 text-primary",
+          "size-8 rounded-lg",
+          tone === "alert" ? "soft-badge-warning" : "icon-badge",
         )}
       >
         <Icon className="size-3.5" />

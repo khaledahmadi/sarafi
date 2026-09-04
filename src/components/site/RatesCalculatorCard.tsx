@@ -31,10 +31,7 @@ export function RatesCalculatorCard({
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-2xl border border-white/20 bg-card",
-        compact
-          ? "shadow-[0_16px_40px_-24px_oklch(0.23_0.065_264/0.55)]"
-          : "shadow-[0_24px_60px_-28px_oklch(0.23_0.065_264/0.55)]",
+        "overflow-hidden rounded-2xl border border-white/20 bg-card shadow-[var(--shadow-raised)] dark:border-border",
         className,
       )}
     >

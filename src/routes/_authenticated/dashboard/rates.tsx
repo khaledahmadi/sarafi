@@ -24,7 +24,8 @@ import { AppSelect, NumberField, SearchableSelectField, TextField } from "@/comp
 import { currencyCodeOptions, findCurrencyCode } from "@/lib/currency-codes";
 import { fieldClass, labelClass } from "@/lib/forms";
 import { deleteCurrency, listAdminCurrencies, saveCurrency } from "@/lib/portal.functions";
-import { currencySchema, fieldErrorMap, parseNum, validateRatePair } from "@/lib/validation";
+import { ACTIONS_CELL_CONTENT, ACTIONS_COLUMN_ALIGN } from "@/lib/data-table";
+import { currencySchema, fieldErrorMap, parseNum, translateFieldErrors, translateRatePairErrors, validateRatePair, resolveValidationMessage } from "@/lib/validation";
 import { site } from "@/lib/site";
 
 export const Route = createFileRoute("/_authenticated/dashboard/rates")({
@@ -70,7 +71,7 @@ function toRate(value: number | string) {
 }
 
 function RatesManagePage() {
-  const { t, n, d } = useLocale();
+  const { t, n, d, dir } = useLocale();
   const sortLabels: Record<SortKey, string> = {
     name_fa: t("admin.sortCurrency"),
     buy_rate: t("admin.sortBuy"),
@@ -139,7 +140,7 @@ function RatesManagePage() {
       const payload = payloadOf(state);
       const parsed = currencySchema.safeParse(payload);
       if (!parsed.success) {
-        setErrors(fieldErrorMap(parsed.error));
+        setErrors(fieldErrorMap(parsed.error, t));
         throw new Error(t("admin.formIncomplete"));
       }
       if (isDuplicateCode(payload.code)) {
@@ -151,8 +152,8 @@ function RatesManagePage() {
     },
     onSuccess: (result) => {
       if (!result.ok) {
-        setErrors(result.fieldErrors ?? {});
-        toast.error(result.message);
+        setErrors(translateFieldErrors(result.fieldErrors, t));
+        toast.error(resolveValidationMessage(result.message ?? "validation.operationFailed", t));
         return;
       }
       toast.success(form.id ? t("admin.ratesSaved") : t("admin.ratesCreated"));
@@ -166,7 +167,7 @@ function RatesManagePage() {
     mutationFn: (id: string) => deleteCurrency({ data: { id } }),
     onSuccess: (result) => {
       if (!result.ok) {
-        toast.error(result.message);
+        toast.error(resolveValidationMessage(result.message ?? "validation.operationFailed", t));
         return;
       }
       toast.success(t("admin.ratesDeleted"));
@@ -315,7 +316,7 @@ function RatesManagePage() {
       <div className="grid gap-3 sm:grid-cols-3">
         {stats.map((stat) => (
           <div key={stat.label} className="flex items-center gap-3 p-4 card-elevated">
-            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+            <span className="icon-badge size-10 rounded-xl">
               <stat.icon className="size-5" />
             </span>
             <div>
@@ -337,7 +338,7 @@ function RatesManagePage() {
                 <Search className="pointer-events-none absolute end-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <input
                   id="rate-search"
-                  dir="rtl"
+                  dir={dir}
                   className={`${fieldClass} pe-10`}
                   placeholder={t("admin.ratesSearchPh")}
                   value={search}
@@ -401,7 +402,9 @@ function RatesManagePage() {
           </p>
 
           <div className="overflow-x-auto card-elevated">
-            <table className="w-full min-w-[46rem] text-right text-sm">
+            <table
+              className={`w-full min-w-[46rem] text-sm ${dir === "ltr" ? "text-left" : "text-right"}`}
+            >
               <thead className="bg-secondary/80">
                 <tr>
                   {(["name_fa", "buy_rate", "sell_rate", "is_active", "updated_at"] as SortKey[]).map(
@@ -426,7 +429,9 @@ function RatesManagePage() {
                       </th>
                     ),
                   )}
-                  <th className="px-4 py-3 font-semibold">{t("common.actions")}</th>
+                  <th className={`px-4 py-3 font-semibold ${ACTIONS_COLUMN_ALIGN}`}>
+                    {t("common.actions")}
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -439,12 +444,33 @@ function RatesManagePage() {
                 )}
                 {paginated.map((currency) => {
                   const deleting = remove.isPending && remove.variables === currency.id;
+                  const actionsCell = (
+                    <td className={`px-4 py-3 ${ACTIONS_COLUMN_ALIGN}`}>
+                      <div className={ACTIONS_CELL_CONTENT}>
+                        <button
+                          type="button"
+                          onClick={() => startEdit(currency)}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold"
+                        >
+                          <Pencil className="size-3.5" /> {t("common.edit")}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={deleting}
+                          onClick={() => setPendingDelete(currency)}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-destructive/40 px-3 py-1.5 text-xs font-semibold text-destructive disabled:opacity-60"
+                        >
+                          <Trash2 className="size-3.5" /> {t("common.delete")}
+                        </button>
+                      </div>
+                    </td>
+                  );
                   return (
                     <tr
                       key={currency.id}
                       className="border-t border-border transition hover:bg-secondary/40"
                     >
-                      <td className="px-4 py-3">
+                                            <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary/10 text-base">
                             {currency.flag || "💱"}
@@ -452,7 +478,7 @@ function RatesManagePage() {
                           <span>
                             <span className="font-semibold">{currency.name_fa}</span>
                             {form.id === currency.id && (
-                              <span className="ms-2 rounded-full bg-accent/20 px-2 py-0.5 text-[10px] font-bold text-accent-foreground">
+                              <span className="ms-2 rounded-full soft-badge-accent px-2 py-0.5 text-[10px] font-bold">
                                 {t("admin.editing")}
                               </span>
                             )}
@@ -471,7 +497,7 @@ function RatesManagePage() {
                         <span
                           className={`rounded-full border px-2.5 py-1 text-xs font-bold ${
                             currency.is_active
-                              ? "bg-primary/10 text-primary border-primary/30"
+                              ? "soft-badge-success border"
                               : "bg-secondary text-secondary-foreground border-border"
                           }`}
                         >
@@ -481,25 +507,7 @@ function RatesManagePage() {
                       <td className="px-4 py-3 text-xs text-muted-foreground">
                         {d(currency.updated_at)}
                       </td>
-                      <td className="px-4 py-3">
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={() => startEdit(currency)}
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold"
-                          >
-                            <Pencil className="size-3.5" /> {t("common.edit")}
-                          </button>
-                          <button
-                            type="button"
-                            disabled={deleting}
-                            onClick={() => setPendingDelete(currency)}
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-destructive/40 px-3 py-1.5 text-xs font-semibold text-destructive disabled:opacity-60"
-                          >
-                            <Trash2 className="size-3.5" /> {t("common.delete")}
-                          </button>
-                        </div>
-                      </td>
+                      {actionsCell}
                     </tr>
                   );
                 })}
@@ -587,9 +595,12 @@ function RatesManagePage() {
               placeholder="0.00"
               onValueChange={(buy) => setForm((p) => ({ ...p, buy }))}
               onValidate={(buy) => {
-                const pair = form.sell.trim()
-                  ? validateRatePair(buy, form.sell)
-                  : validateRatePair(buy, "");
+                const pair = translateRatePairErrors(
+                  form.sell.trim()
+                    ? validateRatePair(buy, form.sell)
+                    : validateRatePair(buy, ""),
+                  t,
+                );
                 setErrors((p) => ({
                   ...p,
                   buy_rate: pair.buy_rate ?? "",
@@ -604,9 +615,12 @@ function RatesManagePage() {
               placeholder="0.00"
               onValueChange={(sell) => setForm((p) => ({ ...p, sell }))}
               onValidate={(sell) => {
-                const pair = form.buy.trim()
-                  ? validateRatePair(form.buy, sell)
-                  : validateRatePair("", sell);
+                const pair = translateRatePairErrors(
+                  form.buy.trim()
+                    ? validateRatePair(form.buy, sell)
+                    : validateRatePair("", sell),
+                  t,
+                );
                 setErrors((p) => ({
                   ...p,
                   sell_rate: pair.sell_rate ?? "",

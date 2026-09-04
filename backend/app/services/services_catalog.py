@@ -37,7 +37,7 @@ def create_service(db: Session, payload: ServiceCreate) -> dict:
         return {
             "ok": False,
             "message": "این نشانی خدمت قبلاً ثبت شده است",
-            "fieldErrors": {"slug": "این نشانی قبلاً استفاده شده است"},
+            "fieldErrors": {"slug": "validation.slugTaken"},
         }
     return {"ok": True}
 
@@ -62,7 +62,7 @@ def update_service(db: Session, service_id: uuid.UUID, payload: ServiceUpdate) -
         return {
             "ok": False,
             "message": "این نشانی خدمت قبلاً ثبت شده است",
-            "fieldErrors": {"slug": "این نشانی قبلاً استفاده شده است"},
+            "fieldErrors": {"slug": "validation.slugTaken"},
         }
     return {"ok": True}
 

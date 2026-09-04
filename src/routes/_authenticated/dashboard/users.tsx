@@ -28,7 +28,8 @@ import { useRoles, useSession } from "@/hooks/use-session";
 import { AppSelect, SelectField, TextField } from "@/components/site/Field";
 import { fieldClass, labelClass } from "@/lib/forms";
 import { createAdminUser, listAdminUsers, setUserRole } from "@/lib/portal.functions";
-import { createAdminUserSchema, fieldErrorMap } from "@/lib/validation";
+import { ACTIONS_CELL_CONTENT, ACTIONS_COLUMN_ALIGN } from "@/lib/data-table";
+import { createAdminUserSchema, fieldErrorMap, translateFieldErrors, resolveValidationMessage } from "@/lib/validation";
 import { site } from "@/lib/site";
 
 export const Route = createFileRoute("/_authenticated/dashboard/users")({
@@ -44,8 +45,8 @@ export const Route = createFileRoute("/_authenticated/dashboard/users")({
 type AppRole = "admin" | "staff" | "customer";
 
 const roleBadge: Record<AppRole, string> = {
-  admin: "bg-primary/10 text-primary border-primary/30",
-  staff: "bg-accent/15 text-accent-foreground border-accent/40",
+  admin: "soft-badge-accent border",
+  staff: "soft-badge-primary border",
   customer: "bg-secondary text-secondary-foreground border-border",
 };
 
@@ -90,7 +91,7 @@ function initials(name: string | null) {
 }
 
 function UsersPage() {
-  const { t, n, d } = useLocale();
+  const { t, n, d, dir } = useLocale();
   const roleLabels = {
     admin: t("admin.roleAdmin"),
     staff: t("admin.roleStaff"),
@@ -135,7 +136,7 @@ function UsersPage() {
     mutationFn: async (state: CreateForm) => {
       const parsed = createAdminUserSchema.safeParse(state);
       if (!parsed.success) {
-        setErrors(fieldErrorMap(parsed.error));
+        setErrors(fieldErrorMap(parsed.error, t));
         throw new Error(t("admin.formIncomplete"));
       }
       setErrors({});
@@ -143,8 +144,8 @@ function UsersPage() {
     },
     onSuccess: (result) => {
       if (!result.ok) {
-        setErrors(result.fieldErrors ?? {});
-        toast.error(result.message);
+        setErrors(translateFieldErrors(result.fieldErrors, t));
+        toast.error(resolveValidationMessage(result.message ?? "validation.operationFailed", t));
         return;
       }
       toast.success(t("admin.userCreated", { role: roleLabels[form.role] }));
@@ -158,7 +159,7 @@ function UsersPage() {
   const setRole = useMutation({
     mutationFn: async (vars: { userId: string; role: AppRole }) => {
       const result = await setUserRole({ data: vars });
-      if (!result.ok) throw new Error(result.message);
+      if (!result.ok) throw new Error(resolveValidationMessage(result.message ?? "validation.operationFailed", t));
     },
     onSuccess: (_data, vars) => {
       const member = members.data?.find((m) => m.id === vars.userId);
@@ -281,7 +282,7 @@ function UsersPage() {
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => (
           <div key={stat.label} className="flex items-center gap-3 p-4 card-elevated">
-            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+            <span className="icon-badge size-10 rounded-xl">
               <stat.icon className="size-5" />
             </span>
             <div>
@@ -303,7 +304,7 @@ function UsersPage() {
             <Search className="pointer-events-none absolute end-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <input
               id="user-search"
-              dir="rtl"
+              dir={dir}
               className={`${fieldClass} pe-10`}
               placeholder={t("admin.usersSearchPh")}
               value={search}
@@ -366,7 +367,9 @@ function UsersPage() {
       </p>
 
       <div className="overflow-x-auto card-elevated">
-        <table className="w-full min-w-[46rem] text-right text-sm">
+        <table
+          className={`w-full min-w-[46rem] text-sm ${dir === "ltr" ? "text-left" : "text-right"}`}
+        >
           <thead className="bg-secondary/80">
             <tr>
               {(["full_name", "phone", "role", "created_at"] as SortKey[]).map((key) => (
@@ -389,7 +392,9 @@ function UsersPage() {
                   </button>
                 </th>
               ))}
-              <th className="px-4 py-3 font-semibold">{t("admin.changeRole")}</th>
+              <th className={`px-4 py-3 font-semibold ${ACTIONS_COLUMN_ALIGN}`}>
+                    {t("admin.changeRole")}
+                  </th>
             </tr>
           </thead>
 
@@ -406,9 +411,36 @@ function UsersPage() {
               const isSelf = member.id === user?.id;
               const isAdminAccount = current === "admin";
               const updating = setRole.isPending && setRole.variables?.userId === member.id;
+              const actionsCell = (
+                <td className={`px-4 py-3 ${ACTIONS_COLUMN_ALIGN}`}>
+                  <div className={ACTIONS_CELL_CONTENT}>
+                    {isSelf || isAdminAccount ? (
+                      <span className="text-xs text-muted-foreground">{t("admin.cannotChangeRole")}</span>
+                    ) : updating ? (
+                      <span className="text-xs text-muted-foreground">{t("admin.saving")}</span>
+                    ) : (
+                      <div className="w-40">
+                        <AppSelect
+                          size="sm"
+                          ariaLabel={t("admin.roleLabel") + ` ${member.full_name ?? t("admin.userFallback")}`}
+                          value={current}
+                          options={assignableRoles.map((role) => ({
+                            value: role,
+                            label: roleLabels[role],
+                          }))}
+                          onValueChange={(value) => {
+                            const role = value as AppRole;
+                            if (role !== current) setPending({ member, role });
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </td>
+              );
               return (
                 <tr key={member.id} className="border-t border-border transition hover:bg-secondary/40">
-                  <td className="px-4 py-3">
+                                    <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary/10 text-xs font-bold text-primary">
                         {initials(member.full_name)}
@@ -416,7 +448,7 @@ function UsersPage() {
                       <span>
                         <span className="font-semibold">{member.full_name ?? t("admin.unnamed")}</span>
                         {isSelf && (
-                          <span className="ms-2 rounded-full bg-accent/20 px-2 py-0.5 text-[10px] font-bold text-accent-foreground">
+                          <span className="ms-2 rounded-full soft-badge-accent px-2 py-0.5 text-[10px] font-bold">
                             {t("admin.yourAccount")}
                           </span>
                         )}
@@ -442,29 +474,7 @@ function UsersPage() {
                   <td className="px-4 py-3 text-xs text-muted-foreground">
                     {d(member.created_at)}
                   </td>
-                  <td className="px-4 py-3">
-                    {isSelf || isAdminAccount ? (
-                      <span className="text-xs text-muted-foreground">{t("admin.cannotChangeRole")}</span>
-                    ) : updating ? (
-                      <span className="text-xs text-muted-foreground">{t("admin.saving")}</span>
-                    ) : (
-                      <div className="w-40">
-                        <AppSelect
-                          size="sm"
-                          ariaLabel={t("admin.roleLabel") + ` ${member.full_name ?? t("admin.userFallback")}`}
-                          value={current}
-                          options={assignableRoles.map((role) => ({
-                            value: role,
-                            label: roleLabels[role],
-                          }))}
-                          onValueChange={(value) => {
-                            const role = value as AppRole;
-                            if (role !== current) setPending({ member, role });
-                          }}
-                        />
-                      </div>
-                    )}
-                  </td>
+                  {actionsCell}
                 </tr>
               );
             })}

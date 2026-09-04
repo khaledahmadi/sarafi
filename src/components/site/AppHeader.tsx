@@ -12,6 +12,7 @@ import { useSignOut } from "@/hooks/use-sign-out";
 import { useSessionCountdown } from "@/hooks/use-session-countdown";
 import { useSiteSettings } from "@/hooks/use-settings";
 import { LanguageSwitcher, useLocale } from "@/i18n";
+import { ThemeSwitcher } from "@/theme";
 import { BrandMark } from "@/components/site/BrandMark";
 
 /** Header for the private dashboard, separate from the public site. */
@@ -50,7 +51,8 @@ export function AppHeader() {
         </div>
 
         <div className="flex items-center gap-2">
-          <LanguageSwitcher compact variant="dark" />
+          <ThemeSwitcher compact variant="chrome" />
+          <LanguageSwitcher compact variant="chrome" />
 
           {!ready ? (
             <span
@@ -102,7 +104,7 @@ export function AppHeader() {
                         <span
                           className={`mt-1.5 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-semibold ${
                             countdown.trusted
-                              ? "bg-accent/15 text-accent-foreground"
+                              ? "soft-badge-accent"
                               : "bg-muted text-muted-foreground"
                           }`}
                         >

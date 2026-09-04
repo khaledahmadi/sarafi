@@ -1,6 +1,6 @@
 import { useId, useMemo, useState } from "react";
 import { ArrowLeftRight, Calculator } from "lucide-react";
-import { AppSelect, TextField } from "@/components/site/Field";
+import { AppSelect, NumberField } from "@/components/site/Field";
 import { currencyUnitSize } from "@/lib/currency-units";
 import { cn } from "@/lib/utils";
 import { site } from "@/lib/site";
@@ -51,6 +51,26 @@ function parseAmount(value: string) {
     .replace(/[^\d.]/g, "");
   const n = Number(normalized);
   return Number.isFinite(n) ? n : 0;
+}
+
+/** Scale the result type so long totals stay inside the card on narrow screens. */
+function resultAmountClass(
+  result: number | null,
+  format: (value: number) => string,
+  compact: boolean,
+) {
+  if (result === null) return compact ? "text-xl" : "mt-1 text-3xl";
+  const length = format(result).replace(/\s/g, "").length;
+  if (compact) {
+    if (length > 16) return "text-sm";
+    if (length > 12) return "text-base";
+    if (length > 9) return "text-lg";
+    return "text-xl";
+  }
+  if (length > 18) return "mt-1 text-base sm:text-lg";
+  if (length > 14) return "mt-1 text-lg sm:text-xl";
+  if (length > 10) return "mt-1 text-xl sm:text-2xl";
+  return "mt-1 text-2xl sm:text-3xl";
 }
 
 export function CurrencyConverter({
@@ -116,7 +136,7 @@ export function CurrencyConverter({
       <div className={cn("flex items-center gap-2.5", compact && "gap-2")}>
         <span
           className={cn(
-            "grid shrink-0 place-items-center rounded-xl bg-primary text-accent",
+            "icon-tile shrink-0 rounded-xl",
             compact ? "size-9 rounded-lg" : "size-11 rounded-2xl",
           )}
         >
@@ -177,23 +197,21 @@ export function CurrencyConverter({
           )}
         </div>
 
-        <TextField
+        <NumberField
           label={t("rates.amountLabel")}
           fieldSize={compact ? "sm" : "md"}
-          inputMode="decimal"
-          dir="ltr"
           className={cn(
-            "text-left font-semibold tabular-nums",
+            "min-w-0 text-left font-semibold tabular-nums",
             compact ? "text-base" : "text-lg",
           )}
           value={amount}
-          onChange={(e) => setAmount(e.target.value)}
+          onValueChange={setAmount}
           placeholder="1"
         />
 
         <div
           className={cn(
-            "relative rounded-2xl border border-border/70 bg-muted/20",
+            "relative min-w-0 rounded-2xl border border-border/70 bg-muted/20",
             compact ? "p-2" : "p-3",
           )}
         >
@@ -223,7 +241,7 @@ export function CurrencyConverter({
               setTo(from);
             }}
             className={cn(
-              "absolute start-1/2 top-1/2 z-10 grid -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-2 border-card bg-primary text-accent shadow-md transition-transform hover:scale-105 rtl:translate-x-1/2",
+              "absolute start-1/2 top-1/2 z-10 icon-tile -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-card shadow-md transition-transform hover:scale-105 rtl:translate-x-1/2",
               compact ? "size-8" : "size-10",
             )}
           >
@@ -231,14 +249,19 @@ export function CurrencyConverter({
           </button>
         </div>
 
-        <div className={cn("rounded-2xl border border-primary/15 bg-primary/5", compact ? "p-3" : "p-4")}>
-          <div className={cn("flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between", !compact && "gap-3")}>
-            <div>
+        <div
+          className={cn(
+            "min-w-0 overflow-hidden rounded-2xl border border-border bg-muted/40",
+            compact ? "p-3" : "p-4",
+          )}
+        >
+          <div className="flex min-w-0 flex-col gap-2.5">
+            <div className="min-w-0">
               <span className="text-xs font-medium text-muted-foreground">{t("rates.finalAmount")}</span>
               <p
                 className={cn(
-                  "mt-0.5 font-extrabold tabular-nums text-primary",
-                  compact ? "text-xl" : "mt-1 text-3xl",
+                  "mt-0.5 min-w-0 max-w-full break-words font-extrabold leading-tight tabular-nums text-foreground [overflow-wrap:anywhere]",
+                  resultAmountClass(result, n, compact),
                 )}
                 dir="ltr"
               >
@@ -248,7 +271,7 @@ export function CurrencyConverter({
             {unit !== null && (
               <p
                 className={cn(
-                  "rounded-lg bg-card/80 font-medium text-muted-foreground ring-1 ring-border/60",
+                  "inline-flex max-w-full self-start break-words rounded-lg bg-card/80 font-medium text-muted-foreground ring-1 ring-border/60 [overflow-wrap:anywhere]",
                   compact ? "px-2 py-1 text-[10px]" : "px-3 py-1.5 text-xs",
                 )}
                 dir="ltr"

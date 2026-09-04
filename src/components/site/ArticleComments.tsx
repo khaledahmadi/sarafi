@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { useSession } from "@/hooks/use-session";
 import { articleCommentsQuery } from "@/lib/queries";
 import { createArticleComment, type PublicComment } from "@/lib/public.functions";
-import { commentSchema, fieldErrorMap } from "@/lib/validation";
+import { commentSchema, fieldErrorMap, resolveValidationMessage, translateFieldErrors } from "@/lib/validation";
 import { useLocale } from "@/i18n";
 import { cn } from "@/lib/utils";
 
@@ -45,7 +45,7 @@ function CommentForm({
         guest_email: form.guestEmail,
       });
       if (!parsed.success) {
-        setErrors(fieldErrorMap(parsed.error));
+        setErrors(fieldErrorMap(parsed.error, t));
         throw new Error(t("common.formInvalid"));
       }
       setErrors({});
@@ -65,8 +65,8 @@ function CommentForm({
     },
     onSuccess: (result) => {
       if (!result.ok) {
-        setErrors(result.fieldErrors ?? {});
-        toast.error(result.message);
+        setErrors(translateFieldErrors(result.fieldErrors, t));
+        toast.error(resolveValidationMessage(result.message ?? "validation.formInvalid", t));
         return;
       }
       toast.success(parentId ? t("articles.replyPosted") : t("articles.commentPosted"));
@@ -85,7 +85,7 @@ function CommentForm({
       guest_email: field === "guest_email" ? value : form.guestEmail,
     });
     if (!parsed.success) {
-      const next = fieldErrorMap(parsed.error);
+      const next = fieldErrorMap(parsed.error, t);
       setErrors((prev) => ({ ...prev, [field]: next[field] ?? "" }));
       return;
     }
@@ -213,7 +213,7 @@ function CommentCard({
 
   return (
     <li className="space-y-3">
-      <div className="rounded-2xl bg-card p-5 shadow-[0_2px_32px_-8px_rgba(0,0,0,0.06)]">
+      <div className="rounded-2xl bg-card p-5 shadow-[var(--shadow-card)]">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <p className="text-sm font-semibold text-foreground">{comment.author}</p>
           <time className="text-xs text-muted-foreground" dateTime={comment.created_at}>
@@ -267,7 +267,7 @@ export function ArticleComments({ slug }: { slug: string }) {
       </div>
 
       {items.length === 0 ? (
-        <p className="rounded-2xl bg-card px-5 py-6 text-sm text-muted-foreground shadow-[0_2px_32px_-8px_rgba(0,0,0,0.06)]">
+        <p className="rounded-2xl bg-card px-5 py-6 text-sm text-muted-foreground shadow-[var(--shadow-card)]">
           {t("articles.noComments")}
         </p>
       ) : (

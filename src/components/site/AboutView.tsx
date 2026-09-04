@@ -115,7 +115,7 @@ export function AboutView({
             <ul className="mt-6 space-y-4 text-sm">
               {foundedLabel ? (
                 <li className="flex items-start gap-3">
-                  <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/8 text-primary">
+                  <span className="icon-badge size-10 rounded-xl">
                     <Building2 className="size-4" />
                   </span>
                   <div>
@@ -128,7 +128,7 @@ export function AboutView({
               ) : null}
               {address ? (
                 <li className="flex items-start gap-3">
-                  <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/8 text-primary">
+                  <span className="icon-badge size-10 rounded-xl">
                     <MapPin className="size-4" />
                   </span>
                   <div>
@@ -139,7 +139,7 @@ export function AboutView({
               ) : null}
               {hours ? (
                 <li className="flex items-start gap-3">
-                  <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/8 text-primary">
+                  <span className="icon-badge size-10 rounded-xl">
                     <Clock className="size-4" />
                   </span>
                   <div>
@@ -150,7 +150,7 @@ export function AboutView({
               ) : null}
               {phone ? (
                 <li className="flex items-start gap-3">
-                  <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/8 text-primary">
+                  <span className="icon-badge size-10 rounded-xl">
                     <Phone className="size-4" />
                   </span>
                   <div>
@@ -186,7 +186,7 @@ export function AboutView({
                 return (
                   <article key={item.title} className="flex h-full flex-col p-6 card-elevated">
                     <div className="flex items-center justify-between">
-                      <span className="grid size-11 place-items-center rounded-xl bg-primary text-accent">
+                      <span className="icon-tile size-11 rounded-xl">
                         <Icon className="size-5" />
                       </span>
                       <span className="text-xs font-bold text-muted-foreground">
@@ -217,7 +217,7 @@ export function AboutView({
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {branches.map((branch) => (
               <article key={branch.id} className="flex items-start gap-4 p-5 card-elevated">
-                <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary/8 text-primary">
+                <span className="icon-badge size-11 rounded-xl">
                   <Building2 className="size-5" />
                 </span>
                 <div>

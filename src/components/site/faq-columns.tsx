@@ -1,6 +1,7 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import { Pencil, Trash2 } from "lucide-react";
 import type { TranslateFn } from "@/i18n";
+import { ACTIONS_CELL_CONTENT } from "@/lib/data-table";
 
 export type AdminFaqRow = {
   id: string;
@@ -43,7 +44,7 @@ export function createFaqColumns({
         <div>
           <p className="font-semibold">{row.original.question}</p>
           {editingId === row.original.id ? (
-            <span className="mt-1 inline-flex rounded-full bg-accent/20 px-2 py-0.5 text-[10px] font-bold text-accent-foreground">
+            <span className="mt-1 inline-flex rounded-full soft-badge-accent px-2 py-0.5 text-[10px] font-bold">
               {t("admin.editing")}
             </span>
           ) : null}
@@ -65,7 +66,7 @@ export function createFaqColumns({
       header: t("common.status"),
       cell: ({ row }) =>
         row.original.is_active ? (
-          <span className="inline-flex rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary">
+          <span className="inline-flex rounded-full border soft-badge-primary px-2.5 py-1 text-[11px] font-semibold">
             {t("admin.publicVisible")}
           </span>
         ) : (
@@ -79,7 +80,7 @@ export function createFaqColumns({
       header: t("common.actions"),
       enableSorting: false,
       cell: ({ row }) => (
-        <div className="flex flex-wrap items-center gap-2">
+        <div className={ACTIONS_CELL_CONTENT}>
           <button
             type="button"
             onClick={() => onEdit(row.original)}

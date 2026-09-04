@@ -84,7 +84,7 @@ def _apply_transfer_fields(row: TransferRequest, payload: TransferCreate) -> dic
         return {
             "ok": False,
             "message": "ارز مبدا و مقصد نمی‌تواند یکسان باشد",
-            "fieldErrors": {"to_currency": "ارز مقصد را متفاوت انتخاب کنید"},
+            "fieldErrors": {"to_currency": "validation.toCurrencyDifferent"},
         }
     row.from_currency = payload.from_currency
     row.to_currency = payload.to_currency

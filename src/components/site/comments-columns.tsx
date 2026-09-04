@@ -1,6 +1,7 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import { Check, Trash2 } from "lucide-react";
 import type { TranslateFn } from "@/i18n";
+import { ACTIONS_CELL_CONTENT } from "@/lib/data-table";
 import type { AdminComment } from "@/lib/comments-table";
 
 type CommentsColumnsProps = {
@@ -64,8 +65,8 @@ export function createCommentsColumns({
         <span
           className={
             row.original.is_approved
-              ? "inline-flex rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary"
-              : "inline-flex rounded-full border border-warning/40 bg-warning/15 px-2.5 py-1 text-[11px] font-semibold text-warning-foreground"
+              ? "inline-flex rounded-full border soft-badge-primary px-2.5 py-1 text-[11px] font-semibold"
+              : "inline-flex rounded-full border soft-badge-warning px-2.5 py-1 text-[11px] font-semibold"
           }
         >
           {row.original.is_approved ? t("admin.approved") : t("admin.pendingShort")}
@@ -84,7 +85,7 @@ export function createCommentsColumns({
       header: t("common.actions"),
       enableSorting: false,
       cell: ({ row }) => (
-        <div className="flex flex-wrap items-center gap-2">
+        <div className={ACTIONS_CELL_CONTENT}>
           {row.original.is_approved ? null : (
             <button
               type="button"

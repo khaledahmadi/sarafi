@@ -36,19 +36,19 @@ def create_feedback(db: Session, payload: FeedbackCreate, user: User | None) -> 
     body = html_to_text(payload.body)
     errors: dict[str, str] = {}
     if not body:
-        errors["body"] = "متن بازخورد را بنویسید"
+        errors["body"] = "validation.feedbackBodyRequired"
     if payload.rating < 1 or payload.rating > 5:
-        errors["rating"] = "امتیاز باید بین ۱ تا ۵ باشد"
+        errors["rating"] = "validation.ratingRange"
 
     guest_name = (payload.guest_name or "").strip() or None
     guest_email = (payload.guest_email or "").strip().lower() or None
     if user is None:
         if not guest_name or len(guest_name) < 2:
-            errors["guest_name"] = "نام را وارد کنید"
+            errors["guest_name"] = "validation.guestNameMin"
         if not guest_email or not _EMAIL.match(guest_email):
-            errors["guest_email"] = "ایمیل معتبر وارد کنید"
+            errors["guest_email"] = "validation.invalidEmail"
     if errors:
-        return fail_result("اطلاعات فرم را بررسی کنید", errors)
+        return fail_result("validation.formInvalid", errors)
 
     row = Feedback(
         user_id=user.id if user else None,

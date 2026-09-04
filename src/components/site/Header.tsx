@@ -6,6 +6,7 @@ import { useSignOut } from "@/hooks/use-sign-out";
 import { useSiteSettings } from "@/hooks/use-settings";
 import { resolveAuthNavState, type AuthUser } from "@/lib/api/auth-store";
 import { LanguageSwitcher, useLocale } from "@/i18n";
+import { ThemeSwitcher } from "@/theme";
 import { BrandMark } from "@/components/site/BrandMark";
 
 export function Header() {
@@ -30,11 +31,11 @@ export function Header() {
   );
 
   return (
-    <header className="sticky top-0 z-50 border-b border-white/10 surface-navy/95 surface-navy backdrop-blur">
+    <header className="sticky top-0 z-50 border-b border-sidebar-border bg-sidebar/95 text-sidebar-foreground backdrop-blur">
       <div className="mx-auto flex h-16 w-full max-w-6xl flex-nowrap items-center gap-3 px-4">
         <Link to="/" className="flex shrink-0 items-center gap-3">
           <BrandMark />
-          <span className="whitespace-nowrap text-base font-bold text-navy-foreground">
+          <span className="whitespace-nowrap text-base font-bold text-sidebar-foreground">
             {brandName}
           </span>
         </Link>
@@ -45,8 +46,8 @@ export function Header() {
               key={item.to}
               to={item.to}
               activeOptions={{ exact: item.to === "/" }}
-              className="shrink-0 whitespace-nowrap rounded-lg px-2 py-2 text-sm text-navy-foreground/75 transition-colors hover:bg-white/10 hover:text-navy-foreground"
-              activeProps={{ className: "bg-white/10 text-accent" }}
+              className="shrink-0 whitespace-nowrap rounded-lg px-2 py-2 text-sm text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+              activeProps={{ className: "bg-sidebar-accent font-semibold text-accent" }}
             >
               {item.label}
             </Link>
@@ -54,7 +55,8 @@ export function Header() {
         </nav>
 
         <div className="ms-auto flex shrink-0 items-center gap-2">
-          <LanguageSwitcher compact />
+          <ThemeSwitcher compact variant="chrome" />
+          <LanguageSwitcher compact variant="chrome" />
           <div className="hidden lg:block">
             <HeaderAuth />
           </div>
@@ -86,13 +88,13 @@ function HeaderAuth() {
     case "pending":
       return (
         <span
-          className="flex items-center gap-2 rounded-lg bg-white/10 px-2.5 py-2 xl:px-3"
+          className="flex items-center gap-2 rounded-lg bg-sidebar-accent px-2.5 py-2 xl:px-3"
           aria-label={t("common.sessionChecking")}
           aria-busy="true"
         >
-          <span className="size-4 shrink-0 animate-pulse rounded bg-white/25" />
-          <span className="inline-block h-4 w-[7rem] animate-pulse rounded bg-white/25 xl:w-[9rem]" />
-          <span className="size-4 shrink-0 animate-pulse rounded bg-white/25" />
+          <span className="size-4 shrink-0 animate-pulse rounded bg-sidebar-foreground/20" />
+          <span className="inline-block h-4 w-[7rem] animate-pulse rounded bg-sidebar-foreground/20 xl:w-[9rem]" />
+          <span className="size-4 shrink-0 animate-pulse rounded bg-sidebar-foreground/20" />
         </span>
       );
     case "user":
@@ -154,7 +156,7 @@ function UserMenu({
         onClick={onToggle}
         aria-haspopup="menu"
         aria-expanded={menuOpen}
-        className="flex items-center gap-2 rounded-lg bg-white/10 px-2.5 py-2 text-sm font-semibold text-navy-foreground transition-colors hover:bg-white/20 xl:px-3"
+        className="flex items-center gap-2 rounded-lg bg-sidebar-accent px-2.5 py-2 text-sm font-semibold text-sidebar-foreground transition-colors hover:bg-sidebar-accent/80 xl:px-3"
       >
         <User className="size-4 shrink-0" />
         <span className="max-w-[7rem] truncate xl:max-w-[9rem]">{user.email}</span>

@@ -31,7 +31,7 @@ import { useRoles } from "@/hooks/use-session";
 import { TextAreaField, TextField } from "@/components/site/Field";
 import { fieldClassSm } from "@/lib/forms";
 import { listAdminSettings, saveSettings } from "@/lib/portal.functions";
-import { settingsSchema } from "@/lib/validation";
+import { resolveValidationMessage, settingsSchema } from "@/lib/validation";
 import { site } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
@@ -260,10 +260,15 @@ function PagesManagePage() {
         .map((row) => ({ key: row.key, value: draft[row.key] ?? "" }));
       const parsed = settingsSchema.safeParse({ values });
       if (!parsed.success) {
-        throw new Error(parsed.error.issues[0]?.message ?? t("admin.pagesFormInvalid"));
+        throw new Error(
+          resolveValidationMessage(
+            parsed.error.issues[0]?.message ?? "admin.pagesFormInvalid",
+            t,
+          ),
+        );
       }
       const result = await saveSettings({ data: { values } });
-      if (!result.ok) throw new Error(result.message);
+      if (!result.ok) throw new Error(resolveValidationMessage(result.message ?? "validation.operationFailed", t));
     },
     onSuccess: async () => {
       const next = (settings.data ?? []).map((row) => ({
@@ -343,14 +348,14 @@ function PagesManagePage() {
                 className={cn(
                   "flex min-h-11 min-w-44 shrink-0 items-center gap-3 rounded-xl border px-3 py-2.5 text-start transition lg:min-w-0 lg:w-full",
                   selected
-                    ? "border-primary/30 bg-primary/10 text-foreground"
+                    ? "border-primary/40 bg-muted text-foreground"
                     : "border-border bg-background text-muted-foreground hover:bg-muted/60",
                 )}
               >
                 <span
                   className={cn(
                     "inline-flex size-9 shrink-0 items-center justify-center rounded-lg",
-                    selected ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground",
+                    selected ? "icon-tile rounded-lg" : "icon-badge rounded-lg",
                   )}
                 >
                   <Icon className="size-4" />
@@ -360,7 +365,7 @@ function PagesManagePage() {
                   <span className="mt-0.5 block text-xs text-muted-foreground">{t("admin.pagesFields", { count: n(rows.length, 0) })}</span>
                 </span>
                 {changed > 0 ? (
-                  <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-bold text-accent">
+                  <span className="rounded-full soft-badge-accent px-2 py-0.5 text-[11px] font-bold">
                     {n(changed)}
                   </span>
                 ) : null}
@@ -375,7 +380,7 @@ function PagesManagePage() {
         <section className="overflow-hidden card-elevated">
           <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-5 py-4 sm:px-6">
             <div className="flex items-start gap-3">
-              <span className="inline-flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <span className="icon-badge size-10 rounded-xl">
                 <ActiveIcon className="size-5" />
               </span>
               <div>

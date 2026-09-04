@@ -199,7 +199,7 @@ export function ContactWidgets() {
           target="_blank"
           rel="noopener noreferrer"
           aria-label={t("chat.whatsappAria")}
-          className="pointer-events-auto absolute bottom-5 left-5 grid size-14 place-items-center rounded-full bg-success text-success-foreground shadow-[0_8px_24px_-8px_oklch(0.45_0.12_155/0.7)] transition hover:brightness-110"
+          className="pointer-events-auto absolute bottom-5 left-5 grid size-14 place-items-center rounded-full bg-success text-success-foreground shadow-[var(--shadow-raised)] transition hover:brightness-110"
         >
           <WhatsAppIcon className="size-8" />
         </a>
@@ -214,7 +214,7 @@ export function ContactWidgets() {
             aria-expanded={expanded}
             dir={dir}
             className={cn(
-              "flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-[0_24px_60px_-28px_oklch(0.23_0.065_264/0.45)]",
+              "flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-[var(--shadow-raised)]",
               expanded
                 ? "mb-0 h-[calc(100svh-var(--app-header-height)-2.5rem)] max-h-[calc(100svh-var(--app-header-height)-2.5rem)] w-[min(40rem,calc(100vw-2.5rem))]"
                 : "mb-3 h-[min(32rem,calc(100svh-7rem))] w-[min(22rem,calc(100vw-2.5rem))]",
@@ -316,7 +316,7 @@ export function ContactWidgets() {
               <button
                 type="button"
                 onClick={openChat}
-                className="inline-flex min-h-11 items-center gap-2 rounded-full bg-card px-4 text-sm font-semibold text-card-foreground shadow-[0_8px_24px_-10px_oklch(0.23_0.065_264/0.35)]"
+                className="inline-flex min-h-11 items-center gap-2 rounded-full bg-card px-4 text-sm font-semibold text-card-foreground shadow-[var(--shadow-card)]"
               >
                 <span aria-hidden="true">👋</span>
                 <span>{t("chat.chatWithUs")}</span>
@@ -334,7 +334,7 @@ export function ContactWidgets() {
               aria-expanded={open}
               aria-controls={panelId}
               aria-label={open ? t("chat.closeChat") : t("chat.openChat")}
-              className="grid size-14 place-items-center rounded-full bg-primary text-accent shadow-[0_8px_24px_-8px_oklch(0.23_0.065_264/0.55)] transition hover:brightness-110"
+              className="icon-tile size-14 rounded-full shadow-[var(--shadow-raised)] transition hover:brightness-110"
             >
               {open ? <X className="size-6" /> : <MessageCircle className="size-7" />}
             </button>

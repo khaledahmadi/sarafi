@@ -36,7 +36,7 @@ def _prepare_body(body_fa: str) -> tuple[str | None, dict | None]:
         return None, {
             "ok": False,
             "message": "متن مقاله حداقل ۳۰ حرف باشد",
-            "fieldErrors": {"body_fa": "متن مقاله حداقل ۳۰ حرف باشد"},
+            "fieldErrors": {"body_fa": "validation.articleBodyMin"},
         }
     return body, None
 
@@ -64,7 +64,7 @@ def create_article(db: Session, payload: ArticleCreate) -> dict:
         return {
             "ok": False,
             "message": "این نشانی مقاله قبلاً ثبت شده است",
-            "fieldErrors": {"slug": "این نشانی قبلاً استفاده شده است"},
+            "fieldErrors": {"slug": "validation.slugTaken"},
         }
     return {"ok": True, "data": {"slug": row.slug}}
 
@@ -100,7 +100,7 @@ def update_article(db: Session, article_id: uuid.UUID, payload: ArticleUpdate) -
         return {
             "ok": False,
             "message": "این نشانی مقاله قبلاً ثبت شده است",
-            "fieldErrors": {"slug": "این نشانی قبلاً استفاده شده است"},
+            "fieldErrors": {"slug": "validation.slugTaken"},
         }
     return {"ok": True, "data": {"slug": row.slug}}
 

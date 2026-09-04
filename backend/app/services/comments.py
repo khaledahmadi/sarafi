@@ -63,9 +63,9 @@ def create_comment(db: Session, slug: str, payload: CommentCreate, user: User | 
 
     body = html_to_text(payload.body)
     if not body:
-        return fail_result("متن نظر را وارد کنید", {"body": "متن نظر را وارد کنید"})
+        return fail_result("validation.commentBodyRequired", {"body": "validation.commentBodyRequired"})
     if len(body) > 5000:
-        return fail_result("متن نظر بیش از حد طولانی است", {"body": "متن نظر حداکثر ۵۰۰۰ حرف باشد"})
+        return fail_result("validation.commentBodyMax", {"body": "validation.commentBodyMax"})
 
     parent_id = None
     if payload.parent_id:
@@ -80,11 +80,11 @@ def create_comment(db: Session, slug: str, payload: CommentCreate, user: User | 
     if user is None:
         errors: dict[str, str] = {}
         if not guest_name or len(guest_name) < 2:
-            errors["guest_name"] = "نام را وارد کنید"
+            errors["guest_name"] = "validation.guestNameMin"
         if not guest_email or not _EMAIL.match(guest_email):
-            errors["guest_email"] = "ایمیل معتبر وارد کنید"
+            errors["guest_email"] = "validation.invalidEmail"
         if errors:
-            return fail_result("اطلاعات فرم را بررسی کنید", errors)
+            return fail_result("validation.formInvalid", errors)
 
     row = Comment(
         article_id=article.id,
