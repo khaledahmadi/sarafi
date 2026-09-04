@@ -65,6 +65,9 @@ export const fa = {
     optional: "اختیاری",
     openManageMenu: "باز کردن منوی مدیریت",
     closeManageMenu: "بستن منوی مدیریت",
+    openMenu: "باز کردن منو",
+    closeMenu: "بستن منو",
+    mainMenu: "منوی اصلی",
   },
   icons: {
     send: "ارسال",
