@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import {
   flexRender,
   getCoreRowModel,
@@ -17,6 +17,12 @@ import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/compon
 import { AppSelect } from "@/components/site/Field";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLocale } from "@/i18n";
+import {
+  ACTIONS_COLUMN_ALIGN,
+  isActionsColumn,
+  pinActionsColumn,
+} from "@/lib/data-table";
+import { cn } from "@/lib/utils";
 
 type DataTableProps<TData, TValue> = {
   columns: ColumnDef<TData, TValue>[];
@@ -49,9 +55,11 @@ export function DataTable<TData, TValue>({
     pageSize,
   });
 
+  const orderedColumns = useMemo(() => pinActionsColumn(columns), [columns]);
+
   const table = useReactTable({
     data,
-    columns,
+    columns: orderedColumns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -75,6 +83,7 @@ export function DataTable<TData, TValue>({
   const pageCount = Math.max(1, table.getPageCount());
   const pageIndex = table.getState().pagination.pageIndex;
   const currentPageSize = table.getState().pagination.pageSize;
+  const visibleColumnCount = Math.max(1, table.getVisibleLeafColumns().length);
 
   return (
     <div className="space-y-4">
@@ -100,34 +109,40 @@ export function DataTable<TData, TValue>({
       <div className="overflow-hidden rounded-xl border border-border">
         <div className="max-h-[min(36rem,calc(100vh-18rem))] overflow-auto">
           <table className="w-full caption-bottom text-sm">
-            <TableHeader className="sticky top-0 z-10 bg-card">
+            <TableHeader className="sticky top-0 z-10 bg-secondary/80">
               {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => (
-                    <TableHead
-                      key={header.id}
-                      className="h-12 px-3 text-start text-xs font-semibold sm:px-4"
-                    >
-                      {header.isPlaceholder ? null : header.column.getCanSort() ? (
-                        <button
-                          type="button"
-                          className="inline-flex items-center gap-1.5"
-                          onClick={header.column.getToggleSortingHandler()}
-                        >
-                          {flexRender(header.column.columnDef.header, header.getContext())}
-                          {header.column.getIsSorted() === "desc" ? (
-                            <ArrowDown className="size-3.5" />
-                          ) : header.column.getIsSorted() === "asc" ? (
-                            <ArrowUp className="size-3.5" />
-                          ) : (
-                            <ArrowUpDown className="size-3.5 text-muted-foreground" />
-                          )}
-                        </button>
-                      ) : (
-                        flexRender(header.column.columnDef.header, header.getContext())
-                      )}
-                    </TableHead>
-                  ))}
+                <TableRow key={headerGroup.id} className="hover:bg-transparent">
+                  {headerGroup.headers.map((header) => {
+                    const actions = isActionsColumn(header.column.columnDef);
+                    return (
+                      <TableHead
+                        key={header.id}
+                        className={cn(
+                          "h-auto px-4 py-3 text-sm font-semibold text-foreground",
+                          actions ? ACTIONS_COLUMN_ALIGN : "text-start",
+                        )}
+                      >
+                        {header.isPlaceholder ? null : header.column.getCanSort() ? (
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-1 font-semibold hover:text-primary"
+                            onClick={header.column.getToggleSortingHandler()}
+                          >
+                            {flexRender(header.column.columnDef.header, header.getContext())}
+                            {header.column.getIsSorted() === "desc" ? (
+                              <ArrowDown className="size-3.5" />
+                            ) : header.column.getIsSorted() === "asc" ? (
+                              <ArrowUp className="size-3.5" />
+                            ) : (
+                              <ArrowUpDown className="size-3.5 opacity-40" />
+                            )}
+                          </button>
+                        ) : (
+                          flexRender(header.column.columnDef.header, header.getContext())
+                        )}
+                      </TableHead>
+                    );
+                  })}
                 </TableRow>
               ))}
             </TableHeader>
@@ -135,7 +150,7 @@ export function DataTable<TData, TValue>({
               {loading ? (
                 Array.from({ length: 5 }, (_, index) => (
                   <TableRow key={index}>
-                    <TableCell colSpan={columns.length} className="px-4 py-3">
+                    <TableCell colSpan={visibleColumnCount} className="px-4 py-3">
                       <Skeleton className="h-8 w-full" />
                     </TableCell>
                   </TableRow>
@@ -143,17 +158,26 @@ export function DataTable<TData, TValue>({
               ) : table.getRowModel().rows.length ? (
                 table.getRowModel().rows.map((row) => (
                   <TableRow key={row.id}>
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id} className="px-3 py-3 align-top sm:px-4">
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </TableCell>
-                    ))}
+                    {row.getVisibleCells().map((cell) => {
+                      const actions = isActionsColumn(cell.column.columnDef);
+                      return (
+                        <TableCell
+                          key={cell.id}
+                          className={cn(
+                            "px-3 py-3 align-top sm:px-4",
+                            actions && ACTIONS_COLUMN_ALIGN,
+                          )}
+                        >
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </TableCell>
+                      );
+                    })}
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
                   <TableCell
-                    colSpan={columns.length}
+                    colSpan={visibleColumnCount}
                     className="h-24 px-4 text-center text-muted-foreground"
                   >
                     {resolvedEmptyLabel}

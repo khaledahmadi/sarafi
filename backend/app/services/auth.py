@@ -49,7 +49,7 @@ def signup_user(
         raise AuthError(
             "این ایمیل قبلاً ثبت شده است. وارد شوید.",
             status_code=400,
-            field_errors={"email": "این ایمیل قبلاً ثبت شده است"},
+            field_errors={"email": "validation.emailAlreadyRegistered"},
         )
 
     user = User(

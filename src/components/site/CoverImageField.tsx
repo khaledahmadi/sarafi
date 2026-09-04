@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { useLocale } from "@/i18n";
 import { uploadArticleImage } from "@/lib/portal.functions";
 import { errorClass, labelClass } from "@/lib/forms";
+import { resolveValidationMessage } from "@/lib/validation";
 import { cn } from "@/lib/utils";
 
 const IMAGE_ACCEPT = "image/png,image/jpeg,image/jpg,image/webp";
@@ -74,7 +75,11 @@ export function CoverImageField({ label, value, onChange, error }: CoverImageFie
     setUploading(false);
 
     if (!result.ok || !result.data?.url) {
-      toast.error(!result.ok ? result.message : t("media.uploadFailed"));
+      toast.error(
+        !result.ok
+          ? resolveValidationMessage(result.message ?? "media.uploadFailed", t)
+          : t("media.uploadFailed"),
+      );
       URL.revokeObjectURL(objectUrl);
       setLocalPreview(null);
       setFileName("");

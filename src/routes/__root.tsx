@@ -35,6 +35,12 @@ import {
   useLocale,
 } from "@/i18n";
 import { getRequestLocale } from "@/i18n/get-request-locale";
+import {
+  ThemeProvider,
+  THEME_BOOTSTRAP_SCRIPT,
+  useTheme,
+} from "@/theme";
+import { getRequestTheme } from "@/theme/get-request-theme";
 
 function NotFoundComponent() {
   const { t } = useLocale();
@@ -91,12 +97,13 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   loader: async ({ context }) => {
-    const [, locale, rateSource] = await Promise.all([
+    const [, locale, rateSource, theme] = await Promise.all([
       context.queryClient.fetchQuery(settingsQuery),
       getRequestLocale(),
       getRequestRateSource(),
+      getRequestTheme(),
     ]);
-    return { locale, rateSource };
+    return { locale, rateSource, theme };
   },
   head: ({ loaderData }) => ({
     meta: [
@@ -149,9 +156,10 @@ function RootShell({ children }: { children: ReactNode }) {
     <html lang="fa" dir="rtl" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: LOCALE_BOOTSTRAP_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP_SCRIPT }} />
         <HeadContent />
       </head>
-      <body className="font-sans antialiased" suppressHydrationWarning>
+      <body className="min-h-svh bg-background font-sans text-foreground antialiased" suppressHydrationWarning>
         {children}
         <Scripts />
         <Analytics />
@@ -163,7 +171,7 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
-  const { locale, rateSource } = Route.useLoaderData();
+  const { locale, rateSource, theme } = Route.useLoaderData();
   const router = useRouter();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const mounted = useHasMounted();
@@ -192,29 +200,31 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <LocaleProvider initialLocale={locale}>
-        <DocumentLocaleSync />
-        <RateSourceProvider initialSource={rateSource}>
-          <NavigationTopLoader />
-          <SessionExpiryWatcher />
-          {isAppArea ? (
-            <div className="flex min-h-screen flex-col bg-muted/30">
-              <AppHeader />
-              <main className="flex-1">
-                <ManageShell>{mounted ? <Outlet /> : null}</ManageShell>
-              </main>
-            </div>
-          ) : (
-            <div className="flex min-h-screen flex-col">
-              <Header />
-              <main className="flex-1">
-                <Outlet />
-              </main>
-              <Footer />
-              {mounted ? <ContactWidgets /> : null}
-            </div>
-          )}
-          <LocaleToaster mounted={mounted} />
-        </RateSourceProvider>
+        <ThemeProvider initialTheme={theme}>
+          <DocumentLocaleSync />
+          <RateSourceProvider initialSource={rateSource}>
+            <NavigationTopLoader />
+            <SessionExpiryWatcher />
+            {isAppArea ? (
+              <div className="flex min-h-screen flex-col bg-background">
+                <AppHeader />
+                <main className="flex-1 bg-muted/30">
+                  <ManageShell>{mounted ? <Outlet /> : null}</ManageShell>
+                </main>
+              </div>
+            ) : (
+              <div className="flex min-h-screen flex-col bg-background">
+                <Header />
+                <main className="flex-1">
+                  <Outlet />
+                </main>
+                <Footer />
+                {mounted ? <ContactWidgets /> : null}
+              </div>
+            )}
+            <LocaleToaster mounted={mounted} />
+          </RateSourceProvider>
+        </ThemeProvider>
       </LocaleProvider>
     </QueryClientProvider>
   );
@@ -233,8 +243,9 @@ function DocumentLocaleSync() {
 
 function LocaleToaster({ mounted }: { mounted: boolean }) {
   const { dir } = useLocale();
+  const { resolvedTheme } = useTheme();
   if (!mounted) return null;
-  return <Toaster position="top-center" dir={dir} richColors />;
+  return <Toaster position="top-center" dir={dir} theme={resolvedTheme} richColors />;
 }
 
 function SessionExpiryWatcher() {

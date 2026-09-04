@@ -33,7 +33,7 @@ def list_all_currencies(db: Session, *, rate_source: str | None = None) -> list[
 DUPLICATE_CODE_ERROR = {
     "ok": False,
     "message": "این کد ارز قبلاً ثبت شده است",
-    "fieldErrors": {"code": "این کد ارز قبلاً ثبت شده است"},
+    "fieldErrors": {"code": "admin.ratesCodeExists"},
 }
 
 
@@ -58,7 +58,7 @@ def _validate_rates(buy_rate: Decimal, sell_rate: Decimal) -> dict | None:
         return {
             "ok": False,
             "message": "نرخ فروش نمی‌تواند کمتر از نرخ خرید باشد",
-            "fieldErrors": {"sell_rate": "نرخ فروش نمی‌تواند کمتر از نرخ خرید باشد"},
+            "fieldErrors": {"sell_rate": "validation.sellBelowBuy"},
         }
     return None
 

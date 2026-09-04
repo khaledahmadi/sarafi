@@ -40,11 +40,11 @@ def create_faq(db: Session, payload: FaqCreate) -> dict:
     answer = html_to_text(payload.answer)
     errors: dict[str, str] = {}
     if len(question) < 3:
-        errors["question"] = "سؤال را وارد کنید"
+        errors["question"] = "validation.questionMin"
     if len(answer) < 3:
-        errors["answer"] = "پاسخ را وارد کنید"
+        errors["answer"] = "validation.answerMin"
     if errors:
-        return fail_result("اطلاعات فرم را بررسی کنید", errors)
+        return fail_result("validation.formInvalid", errors)
 
     row = Faq(
         question=question[:200],
@@ -71,12 +71,12 @@ def update_faq(db: Session, faq_id: uuid.UUID, payload: FaqUpdate) -> dict:
     if "question" in data and data["question"] is not None:
         question = html_to_text(data["question"])
         if len(question) < 3:
-            return fail_result("اطلاعات فرم را بررسی کنید", {"question": "سؤال را وارد کنید"})
+            return fail_result("validation.formInvalid", {"question": "validation.questionMin"})
         data["question"] = question[:200]
     if "answer" in data and data["answer"] is not None:
         answer = html_to_text(data["answer"])
         if len(answer) < 3:
-            return fail_result("اطلاعات فرم را بررسی کنید", {"answer": "پاسخ را وارد کنید"})
+            return fail_result("validation.formInvalid", {"answer": "validation.answerMin"})
         data["answer"] = answer[:2000]
     for field, max_len in (
         ("question_en", 200),

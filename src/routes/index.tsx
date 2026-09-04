@@ -178,7 +178,7 @@ function Index() {
                 key={service.slug}
                 className="group p-6 card-elevated transition-transform hover:-translate-y-1"
               >
-                <span className="grid size-12 place-items-center rounded-xl bg-primary text-accent">
+                <span className="icon-tile size-12 rounded-xl">
                   <Icon className="size-6" />
                 </span>
                 <h3 className="mt-5 text-lg font-bold">

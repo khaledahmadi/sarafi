@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { Check, ChevronDown } from "lucide-react";
-import { LOCALES, LOCALE_FLAGS, LOCALE_LABELS, type Locale } from "@/i18n/config";
+import { Check, Monitor, Moon, Sun } from "lucide-react";
 import { useLocale } from "@/i18n/context";
 import { cn } from "@/lib/utils";
+import { THEMES, type Theme } from "./config";
+import { useTheme } from "./context";
 
 type Props = {
   className?: string;
-  /** Compact trigger for tight header slots */
   compact?: boolean;
   /**
    * `chrome` — sidebar/navbar tokens (light or dark theme).
@@ -16,14 +16,28 @@ type Props = {
   variant?: "light" | "dark" | "chrome";
 };
 
-export function LanguageSwitcher({
+const THEME_ICONS = {
+  light: Sun,
+  dark: Moon,
+  system: Monitor,
+} as const;
+
+const THEME_LABEL_KEYS = {
+  light: "theme.light",
+  dark: "theme.dark",
+  system: "theme.system",
+} as const;
+
+export function ThemeSwitcher({
   className,
   compact = false,
   variant = "chrome",
 }: Props) {
-  const { locale, setLocale, t } = useLocale();
+  const { t } = useLocale();
+  const { theme, setTheme } = useTheme();
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const ActiveIcon = THEME_ICONS[theme];
 
   useEffect(() => {
     if (!open) return;
@@ -48,10 +62,11 @@ export function LanguageSwitcher({
         onClick={() => setOpen((value) => !value)}
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label={t("language.label")}
+        aria-label={t("theme.label")}
+        title={t("theme.label")}
         className={cn(
-          "flex items-center gap-2 font-semibold transition-colors",
-          compact ? "rounded-lg px-2.5 py-2 text-sm" : "rounded-lg px-3 py-2 text-sm",
+          "grid place-items-center font-semibold transition-colors",
+          compact ? "size-9 rounded-lg" : "size-10 rounded-lg",
           variant === "chrome"
             ? "bg-sidebar-accent text-sidebar-foreground hover:bg-sidebar-accent/80"
             : variant === "dark"
@@ -59,27 +74,22 @@ export function LanguageSwitcher({
               : "bg-muted text-foreground hover:bg-muted/70",
         )}
       >
-        <span className="text-base leading-none" aria-hidden="true">
-          {LOCALE_FLAGS[locale]}
-        </span>
-        <span className={cn("max-w-[7rem] truncate", compact && "hidden sm:inline")}>
-          {LOCALE_LABELS[locale]}
-        </span>
-        <ChevronDown className="size-4 opacity-70" />
+        <ActiveIcon className="size-4" aria-hidden="true" />
       </button>
 
       {open ? (
         <div
           role="menu"
-          aria-label={t("language.label")}
+          aria-label={t("theme.label")}
           className="absolute end-0 z-50 mt-2 w-48 overflow-hidden rounded-xl border border-border bg-card p-1 text-card-foreground shadow-xl"
         >
           <div className="border-b border-border px-3 py-2.5">
-            <p className="text-sm font-semibold">{t("language.label")}</p>
+            <p className="text-sm font-semibold">{t("theme.label")}</p>
           </div>
           <div className="flex flex-col gap-1 pt-1">
-            {LOCALES.map((code) => {
-              const selected = code === locale;
+            {THEMES.map((code: Theme) => {
+              const selected = code === theme;
+              const Icon = THEME_ICONS[code];
               return (
                 <button
                   key={code}
@@ -87,7 +97,7 @@ export function LanguageSwitcher({
                   role="menuitemradio"
                   aria-checked={selected}
                   onClick={() => {
-                    setLocale(code);
+                    setTheme(code);
                     setOpen(false);
                   }}
                   className={cn(
@@ -95,10 +105,8 @@ export function LanguageSwitcher({
                     selected && "bg-muted/70 font-semibold",
                   )}
                 >
-                  <span className="text-base leading-none" aria-hidden="true">
-                    {LOCALE_FLAGS[code]}
-                  </span>
-                  <span className="min-w-0 flex-1 text-start">{LOCALE_LABELS[code]}</span>
+                  <Icon className="size-4 shrink-0 opacity-80" aria-hidden="true" />
+                  <span className="min-w-0 flex-1 text-start">{t(THEME_LABEL_KEYS[code])}</span>
                   {selected ? <Check className="size-4 shrink-0 text-primary" /> : null}
                 </button>
               );

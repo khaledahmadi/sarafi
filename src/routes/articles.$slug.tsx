@@ -63,7 +63,7 @@ function ArticlePage() {
       <div className="mx-auto max-w-6xl space-y-8 px-4 py-8 sm:space-y-10 sm:py-10 lg:space-y-12 lg:py-12">
         <div className="lg:grid lg:grid-cols-12 lg:items-start lg:gap-10 xl:gap-12">
           <article
-            className={`overflow-hidden rounded-3xl bg-card px-5 py-6 shadow-[0_2px_48px_-12px_rgba(0,0,0,0.08)] sm:px-7 sm:py-8 lg:px-8 lg:py-9 ${
+            className={`overflow-hidden rounded-3xl border border-border bg-card px-5 py-6 shadow-[var(--shadow-card)] sm:px-7 sm:py-8 lg:px-8 lg:py-9 ${
               hasRelated ? "lg:col-span-8" : "lg:col-span-12"
             }`}
           >
@@ -113,10 +113,10 @@ function ArticlePage() {
                     <Link
                       to="/articles/$slug"
                       params={{ slug: item.slug }}
-                      className="group block overflow-hidden rounded-2xl bg-neutral-950 shadow-[0_8px_40px_-8px_rgba(0,0,0,0.22)] transition duration-300 hover:shadow-[0_16px_48px_-8px_rgba(0,0,0,0.26)]"
+                      className="group block overflow-hidden rounded-2xl border border-border bg-card shadow-[var(--shadow-card)] transition duration-300 hover:shadow-[var(--shadow-raised)]"
                     >
                       {item.cover_url ? (
-                        <div className="relative aspect-video w-full overflow-hidden bg-neutral-800">
+                        <div className="relative aspect-video w-full overflow-hidden bg-muted">
                           <img
                             src={item.cover_url}
                             alt=""
@@ -124,13 +124,13 @@ function ArticlePage() {
                           />
                         </div>
                       ) : null}
-                      <div className="flex min-h-[5.5rem] flex-col bg-[#1c1c1e] px-4 pb-5 pt-4 transition-colors duration-300 group-hover:bg-[#242426] sm:min-h-[5.75rem] sm:px-5 sm:pb-6 sm:pt-5">
-                        <p className="line-clamp-3 text-right text-[0.9375rem] font-medium leading-[1.45] tracking-[-0.015em] text-white sm:text-[0.96875rem]">
+                      <div className="flex min-h-[5.5rem] flex-col bg-card px-4 pb-5 pt-4 transition-colors duration-300 group-hover:bg-muted/40 sm:min-h-[5.75rem] sm:px-5 sm:pb-6 sm:pt-5">
+                        <p className="line-clamp-3 text-start text-[0.9375rem] font-medium leading-[1.45] tracking-[-0.015em] text-card-foreground sm:text-[0.96875rem]">
                           {pickLocalized(item, "title", locale)}
                         </p>
-                        <div className="mt-auto shrink-0 border-t border-white/10 pt-3.5 sm:pt-4">
+                        <div className="mt-auto shrink-0 border-t border-border pt-3.5 sm:pt-4">
                           <time
-                            className="block w-full text-right text-[0.8125rem] leading-none text-white/50"
+                            className="block w-full text-start text-[0.8125rem] leading-none text-muted-foreground"
                             dateTime={item.published_at}
                           >
                             {d(item.published_at)}

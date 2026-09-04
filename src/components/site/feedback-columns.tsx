@@ -1,6 +1,7 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import { Check, Star, Trash2 } from "lucide-react";
 import type { TranslateFn } from "@/i18n";
+import { ACTIONS_CELL_CONTENT } from "@/lib/data-table";
 import { isFeedbackStatus, type FeedbackRow } from "@/lib/feedback-table";
 
 type FeedbackColumnsProps = {
@@ -84,13 +85,13 @@ export function createFeedbackColumns({
         switch (status) {
           case "reviewed":
             return (
-              <span className="inline-flex rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary">
+              <span className="inline-flex rounded-full border soft-badge-primary px-2.5 py-1 text-[11px] font-semibold">
                 {t("admin.reviewed")}
               </span>
             );
           case "pending":
             return (
-              <span className="inline-flex rounded-full border border-warning/40 bg-warning/15 px-2.5 py-1 text-[11px] font-semibold text-warning-foreground">
+              <span className="inline-flex rounded-full border soft-badge-warning px-2.5 py-1 text-[11px] font-semibold">
                 {t("admin.feedbackPending")}
               </span>
             );
@@ -106,7 +107,7 @@ export function createFeedbackColumns({
       header: t("common.actions"),
       enableSorting: false,
       cell: ({ row }) => (
-        <div className="flex flex-wrap items-center gap-2">
+        <div className={ACTIONS_CELL_CONTENT}>
           {row.original.status === "pending" && onReview ? (
             <button
               type="button"

@@ -7,7 +7,7 @@ import { homePathForUser, login, signup } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/client";
 import { useSession } from "@/hooks/use-session";
 import { errorClass, fieldClass, fieldWithError, labelClass } from "@/lib/forms";
-import { emailSchema, friendlyError, passwordSchema } from "@/lib/validation";
+import { emailSchema, fieldErrorMap, friendlyError, passwordSchema, translateFieldErrors } from "@/lib/validation";
 import { isTrustedDevice, setTrustedDevice } from "@/lib/trusted-device";
 import { useLocale } from "@/i18n";
 import { pageMeta, resolvePageLocale } from "@/i18n/meta";
@@ -32,20 +32,11 @@ export const Route = createFileRoute("/auth")({
 const signInSchema = z.object({ email: emailSchema, password: passwordSchema });
 
 const signUpSchema = signInSchema.extend({
-  fullName: z.string().trim().min(3, "Enter your full name").max(100),
-  phone: z.string().trim().min(6, "Enter a valid phone number").max(24),
+  fullName: z.string().trim().min(3, "validation.fullNameMin").max(100, "validation.nameTooLong"),
+  phone: z.string().trim().min(6, "validation.phoneMin").max(24, "validation.phoneTooLong"),
 });
 
 type FieldErrors = Partial<Record<"email" | "password" | "fullName" | "phone", string>>;
-
-function collectErrors(error: z.ZodError) {
-  const map: FieldErrors = {};
-  for (const issue of error.issues) {
-    const key = String(issue.path[0] ?? "") as keyof FieldErrors;
-    if (key && !map[key]) map[key] = issue.message;
-  }
-  return map;
-}
 
 function AuthPage() {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
@@ -73,7 +64,7 @@ function AuthPage() {
       if (mode === "signup") {
         const parsed = signUpSchema.safeParse(form);
         if (!parsed.success) {
-          setErrors(collectErrors(parsed.error));
+          setErrors(fieldErrorMap(parsed.error, t) as FieldErrors);
           toast.error(t("auth.formInvalid"));
           return;
         }
@@ -88,16 +79,17 @@ function AuthPage() {
           navigate({ to: homePathForUser(result) });
           return;
         }
-        const message = friendlyError(result.message);
+        const message = friendlyError(result.message, t);
+        const fieldErrors = translateFieldErrors(result.fieldErrors, t);
         setErrors({
-          email: result.fieldErrors?.["email"] ?? message,
-          ...(result.fieldErrors ?? {}),
+          email: fieldErrors["email"] ?? message,
+          ...fieldErrors,
         });
         toast.error(message);
       } else {
         const parsed = signInSchema.safeParse(form);
         if (!parsed.success) {
-          setErrors(collectErrors(parsed.error));
+          setErrors(fieldErrorMap(parsed.error, t) as FieldErrors);
           toast.error(t("auth.formInvalid"));
           return;
         }
@@ -107,7 +99,7 @@ function AuthPage() {
           navigate({ to: homePathForUser(user) });
         } catch (error) {
           const message =
-            error instanceof ApiError ? t("auth.badCredentials") : friendlyError(undefined);
+            error instanceof ApiError ? t("auth.badCredentials") : friendlyError(undefined, t);
           setErrors({ password: message });
           toast.error(message);
         }

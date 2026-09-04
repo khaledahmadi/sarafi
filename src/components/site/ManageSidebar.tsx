@@ -50,12 +50,12 @@ function sidebarItemClass(isActive: boolean) {
     isActive
       ? cn(
           "group-data-[state=expanded]:border-sidebar-border group-data-[state=expanded]:bg-sidebar-accent group-data-[state=expanded]:font-medium",
-          "group-data-[state=expanded]:shadow-[0_4px_14px_rgba(0,0,0,0.42),0_0_0_1px_rgba(255,255,255,0.08)]",
+          "group-data-[state=expanded]:shadow-[var(--shadow-sidebar-hover)]",
         )
       : cn(
           "group-data-[state=expanded]:border-transparent group-data-[state=expanded]:bg-transparent group-data-[state=expanded]:shadow-none",
           "group-data-[state=expanded]:hover:border-sidebar-border group-data-[state=expanded]:hover:bg-sidebar-accent",
-          "group-data-[state=expanded]:hover:shadow-[0_4px_14px_rgba(0,0,0,0.42),0_0_0_1px_rgba(255,255,255,0.08)]",
+          "group-data-[state=expanded]:hover:shadow-[var(--shadow-sidebar-hover)]",
         ),
     // Collapsed: icon-only card
     "group-data-[collapsible=icon]:!size-9 group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-9 group-data-[collapsible=icon]:!min-h-0 group-data-[collapsible=icon]:shrink-0",
@@ -91,14 +91,14 @@ const sidebarMenuClass = cn(
   "group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:gap-4",
 );
 
-const sidebarIconClass = "size-5 shrink-0";
+const sidebarIconClass = "size-5 shrink-0 text-sidebar-foreground";
 
 function sidebarIconTileClass(isActive: boolean) {
   return cn(
-    "grid size-10 shrink-0 place-items-center rounded-xl border border-sidebar-border/80 bg-sidebar-accent/40 shadow-[var(--shadow-card)] transition-[box-shadow,background-color,border-color]",
+    "grid size-10 shrink-0 place-items-center rounded-xl border border-sidebar-border/80 bg-sidebar-accent/40 text-sidebar-foreground shadow-[var(--shadow-card)] transition-[box-shadow,background-color,border-color,color]",
     "group-data-[state=expanded]:group-hover/nav:border-transparent group-data-[state=expanded]:group-hover/nav:bg-transparent group-data-[state=expanded]:group-hover/nav:shadow-none",
     isActive &&
-      "group-data-[state=expanded]:border-transparent group-data-[state=expanded]:bg-transparent group-data-[state=expanded]:shadow-none",
+      "text-sidebar-primary group-data-[state=expanded]:border-transparent group-data-[state=expanded]:bg-transparent group-data-[state=expanded]:shadow-none",
     "group-data-[collapsible=icon]:size-full group-data-[collapsible=icon]:rounded-none group-data-[collapsible=icon]:border-0 group-data-[collapsible=icon]:bg-transparent group-data-[collapsible=icon]:shadow-none",
   );
 }
@@ -203,7 +203,7 @@ export function ManageSidebar() {
                         </span>
                         {badge > 0 ? (
                           <div
-                            className="ms-auto grid h-5 min-w-5 shrink-0 place-items-center rounded-full border border-warning/20 bg-warning px-1.5 text-[11px] font-bold leading-none text-warning-foreground group-data-[collapsible=icon]:hidden"
+                            className="ms-auto grid h-5 min-w-5 shrink-0 place-items-center rounded-full soft-badge-warning border px-1.5 text-[11px] font-bold leading-none group-data-[collapsible=icon]:hidden"
                             aria-label={t("sidebar.pendingFeedback", {
                               count: n(badge, 0),
                             })}

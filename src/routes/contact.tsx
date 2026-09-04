@@ -5,7 +5,7 @@ import { Phone, Mail, MapPin, Clock, MessageCircle } from "lucide-react";
 import { PageHero } from "@/components/site/Sections";
 import { TextAreaField, TextField } from "@/components/site/Field";
 import { validateContactMessage } from "@/lib/contact.functions";
-import { contactSchema, fieldErrorMap } from "@/lib/validation";
+import { contactSchema, fieldErrorMap, resolveValidationMessage, translateFieldErrors } from "@/lib/validation";
 import { settingsQuery } from "@/lib/queries";
 import { useSiteSettings } from "@/hooks/use-settings";
 import { useLocale } from "@/i18n";
@@ -43,7 +43,7 @@ function ContactPage() {
     event.preventDefault();
     const local = contactSchema.safeParse(form);
     if (!local.success) {
-      setErrors(fieldErrorMap(local.error));
+      setErrors(fieldErrorMap(local.error, t));
       toast.error(t("contact.formInvalid"));
       return;
     }
@@ -51,8 +51,8 @@ function ContactPage() {
     try {
       const result = await validateContactMessage({ data: form });
       if (!result.ok) {
-        setErrors(result.fieldErrors ?? {});
-        toast.error(result.message);
+        setErrors(translateFieldErrors(result.fieldErrors, t));
+        toast.error(resolveValidationMessage(result.message ?? "validation.formInvalid", t));
         return;
       }
       setErrors({});
@@ -94,7 +94,7 @@ function ContactPage() {
         <div className="space-y-4">
           {cards.map((item) => (
             <div key={item.label} className="flex items-start gap-4 p-5 card-elevated">
-              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary text-accent">
+              <span className="icon-tile size-10 shrink-0 rounded-xl">
                 <item.icon className="size-5" />
               </span>
               <div>

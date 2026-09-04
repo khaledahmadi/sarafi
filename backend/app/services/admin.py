@@ -64,13 +64,13 @@ def list_users(db: Session) -> list[User]:
 def create_user(db: Session, payload: AdminCreateUserRequest) -> dict:
     if payload.role == AppRole.ADMIN:
         return fail_result(
-            "ایجاد مدیر جدید مجاز نیست. تنها یک مدیر کافی است.",
-            {"role": "نقش مدیر قابل انتخاب نیست"},
+            "validation.adminCreateForbidden",
+            {"role": "validation.adminRoleNotAllowed"},
         )
     if get_user_by_email(db, payload.email):
         return fail_result(
-            "این ایمیل قبلاً ثبت شده است",
-            {"email": "این ایمیل قبلاً ثبت شده است"},
+            "validation.emailAlreadyRegistered",
+            {"email": "validation.emailAlreadyRegistered"},
         )
 
     user = User(
@@ -89,8 +89,8 @@ def create_user(db: Session, payload: AdminCreateUserRequest) -> dict:
     except IntegrityError:
         db.rollback()
         return fail_result(
-            "این ایمیل قبلاً ثبت شده است",
-            {"email": "این ایمیل قبلاً ثبت شده است"},
+            "validation.emailAlreadyRegistered",
+            {"email": "validation.emailAlreadyRegistered"},
         )
     return ok_result({"id": str(user.id)})
 
@@ -103,7 +103,7 @@ def set_user_role(db: Session, *, actor: User, user_id: uuid.UUID, role: AppRole
     if not target:
         return {"ok": False, "message": "کاربر یافت نشد"}
     if role == AppRole.ADMIN:
-        return {"ok": False, "message": "ایجاد مدیر جدید مجاز نیست. تنها یک مدیر کافی است."}
+        return {"ok": False, "message": "validation.adminCreateForbidden"}
     if target.has_role(AppRole.ADMIN):
         return {"ok": False, "message": "نقش مدیر قابل تغییر نیست."}
 

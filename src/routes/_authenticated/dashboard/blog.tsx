@@ -22,7 +22,7 @@ import { AppSelect, TextAreaField, TextField } from "@/components/site/Field";
 import { RichTextEditor } from "@/components/site/RichTextEditor";
 import { fieldClass, labelClass } from "@/lib/forms";
 import { deleteArticle, listAdminArticles, saveArticle } from "@/lib/portal.functions";
-import { articleSchema, fieldErrorMap, uniqueSlug } from "@/lib/validation";
+import { articleSchema, fieldErrorMap, translateFieldErrors, uniqueSlug, resolveValidationMessage } from "@/lib/validation";
 import { site } from "@/lib/site";
 
 export const Route = createFileRoute("/_authenticated/dashboard/blog")({
@@ -106,7 +106,7 @@ function BlogAdminPage() {
       };
       const parsed = articleSchema.safeParse(payload);
       if (!parsed.success) {
-        setErrors(fieldErrorMap(parsed.error));
+        setErrors(fieldErrorMap(parsed.error, t));
         throw new Error(t("admin.formIncomplete"));
       }
       setErrors({});
@@ -114,8 +114,8 @@ function BlogAdminPage() {
     },
     onSuccess: (result) => {
       if (!result.ok) {
-        setErrors(result.fieldErrors ?? {});
-        toast.error(result.message);
+        setErrors(translateFieldErrors(result.fieldErrors, t));
+        toast.error(resolveValidationMessage(result.message ?? "validation.operationFailed", t));
         return;
       }
       toast.success(form.id ? t("admin.blogSaved") : t("admin.blogCreated"));
@@ -129,7 +129,7 @@ function BlogAdminPage() {
     mutationFn: (id: string) => deleteArticle({ data: { id } }),
     onSuccess: (result) => {
       if (!result.ok) {
-        toast.error(result.message);
+        toast.error(resolveValidationMessage(result.message ?? "validation.operationFailed", t));
         return;
       }
       toast.success(t("admin.blogDeleted"));
@@ -154,7 +154,7 @@ function BlogAdminPage() {
       }),
     onSuccess: (result) => {
       if (!result.ok) {
-        toast.error(result.message);
+        toast.error(resolveValidationMessage(result.message ?? "validation.operationFailed", t));
         return;
       }
       toast.success(t("admin.blogPublishUpdated"));
@@ -262,7 +262,7 @@ function BlogAdminPage() {
       <div className="grid gap-3 sm:grid-cols-3">
         {stats.map((stat) => (
           <div key={stat.label} className="flex items-center gap-3 p-4 card-elevated">
-            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+            <span className="icon-badge size-10 rounded-xl">
               <stat.icon className="size-5" />
             </span>
             <div>
@@ -435,7 +435,7 @@ function BlogAdminPage() {
                     <h3 className="truncate text-sm font-bold">
                       {article.title_fa}
                       {form.id === article.id && (
-                        <span className="ms-2 rounded-full bg-accent/20 px-2 py-0.5 text-[10px] font-bold text-accent-foreground">
+                        <span className="ms-2 rounded-full soft-badge-accent px-2 py-0.5 text-[10px] font-bold">
                           {t("admin.editing")}
                         </span>
                       )}
@@ -447,7 +447,7 @@ function BlogAdminPage() {
                   <span
                     className={`shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
                       article.is_published
-                        ? "bg-primary/10 text-primary border-primary/30"
+                        ? "soft-badge-success border"
                         : "bg-secondary text-secondary-foreground border-border"
                     }`}
                   >

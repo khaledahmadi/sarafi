@@ -51,13 +51,13 @@ def is_safe_upload_src(value: str) -> bool:
 def save_image(file: UploadFile) -> dict:
     data = file.file.read(MAX_IMAGE_BYTES + 1)
     if not data:
-        return fail_result("فایل تصویر خالی است")
+        return fail_result("media.emptyImage")
     if len(data) > MAX_IMAGE_BYTES:
-        return fail_result("حجم تصویر نباید بیشتر از ۵ مگابایت باشد")
+        return fail_result("media.maxSize")
 
     sniffed = sniff_image(data)
     if sniffed is None:
-        return fail_result("فقط تصویرهای JPG، PNG، WEBP یا GIF مجاز است")
+        return fail_result("media.invalidType")
 
     _mime, ext = sniffed
     filename = f"{uuid.uuid4()}{ext}"

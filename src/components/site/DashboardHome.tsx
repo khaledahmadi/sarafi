@@ -67,15 +67,15 @@ function statusClass(status: string): string {
   const key: TransferStatus = isTransferStatus(status) ? status : "pending";
   switch (key) {
     case "pending":
-      return "bg-warning/15 text-warning-foreground";
+      return "soft-badge-warning border";
     case "in_review":
     case "processing":
-      return "bg-primary/10 text-primary";
+      return "soft-badge-primary border";
     case "completed":
-      return "bg-success/15 text-success";
+      return "soft-badge-success border";
     case "rejected":
     case "cancelled":
-      return "bg-destructive/10 text-destructive";
+      return "bg-destructive/10 text-destructive border border-destructive/30";
     default: {
       const _never: never = key;
       return _never;
@@ -116,7 +116,7 @@ function StatTile({
         </p>
         <span
           className={cn(
-            "grid shrink-0 place-items-center rounded-lg bg-primary text-accent",
+            "grid shrink-0 place-items-center rounded-lg icon-tile",
             compact ? "size-8" : "size-11 rounded-xl",
           )}
         >

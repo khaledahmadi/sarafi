@@ -8,11 +8,11 @@ def validate_contact(payload: ContactValidateRequest) -> dict:
 
     field_errors: dict[str, str] = {}
     if len(name) < 2:
-        field_errors["name"] = "نام و تخلص را وارد کنید"
+        field_errors["name"] = "validation.nameMin"
     if len(phone) < 6:
-        field_errors["phone"] = "شماره تماس معتبر وارد کنید"
+        field_errors["phone"] = "validation.phoneMin"
     if len(message) < 10:
-        field_errors["message"] = "متن پیام حداقل ۱۰ حرف باشد"
+        field_errors["message"] = "validation.messageMin"
 
     if field_errors:
         return {

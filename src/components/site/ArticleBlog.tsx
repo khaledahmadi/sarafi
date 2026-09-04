@@ -17,7 +17,7 @@ export function ArticleHero({ article }: { article: BlogArticle }) {
   const title = pickLocalized(article as BlogArticle & { title_en?: string; title_ps?: string }, "title", locale);
   const excerpt = pickLocalized(article as BlogArticle & { excerpt_en?: string; excerpt_ps?: string }, "excerpt", locale);
   return (
-    <article className="overflow-hidden rounded-2xl border border-border bg-card shadow-[0_2px_16px_rgba(0,0,0,0.06)]">
+    <article className="overflow-hidden rounded-2xl border border-border bg-card shadow-[var(--shadow-card)]">
       <Link
         to="/articles/$slug"
         params={{ slug: article.slug }}
@@ -63,7 +63,7 @@ export function ArticleLatestRail({ articles }: { articles: BlogArticle[] }) {
   if (articles.length === 0) return null;
 
   return (
-    <div className="h-full overflow-hidden rounded-2xl border border-border bg-card shadow-[0_2px_16px_rgba(0,0,0,0.06)]">
+    <div className="h-full overflow-hidden rounded-2xl border border-border bg-card shadow-[var(--shadow-card)]">
       <div className="px-5 pt-4 sm:pt-5">
         <div className="mb-3 border-b border-dashed border-border pb-3">
           <h2 className="text-base font-semibold leading-tight tracking-tight sm:text-lg">{t("articles.latest")}</h2>

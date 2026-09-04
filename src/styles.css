@@ -75,6 +75,12 @@
   --gold: oklch(0.82 0.16 88);
   --gold-soft: oklch(0.9 0.11 92);
 
+  /* Brand icon badges: navy+gold in light, gold+navy in dark for contrast. */
+  --icon-tile-bg: var(--navy);
+  --icon-tile-fg: var(--gold);
+  --icon-badge-bg: color-mix(in oklab, var(--navy) 10%, transparent);
+  --icon-badge-fg: var(--navy);
+
   --background: oklch(0.985 0.005 250);
   --foreground: oklch(0.22 0.045 264);
   --card: oklch(1 0 0);
@@ -99,24 +105,39 @@
   --input: oklch(0.9 0.012 255);
   --ring: oklch(0.82 0.16 88);
 
+  /* Soft status/role chips — dark text on tint in light; bright text on tint in dark. */
+  --soft-accent-bg: color-mix(in oklab, var(--accent) 16%, transparent);
+  --soft-accent-fg: var(--accent-foreground);
+  --soft-accent-border: color-mix(in oklab, var(--accent) 40%, transparent);
+  --soft-warning-bg: color-mix(in oklab, var(--warning) 16%, transparent);
+  --soft-warning-fg: var(--warning-foreground);
+  --soft-warning-border: color-mix(in oklab, var(--warning) 40%, transparent);
+  --soft-success-bg: color-mix(in oklab, var(--success) 14%, transparent);
+  --soft-success-fg: var(--success);
+  --soft-success-border: color-mix(in oklab, var(--success) 30%, transparent);
+  --soft-primary-bg: color-mix(in oklab, var(--primary) 10%, transparent);
+  --soft-primary-fg: var(--primary);
+  --soft-primary-border: color-mix(in oklab, var(--primary) 30%, transparent);
+
   --gradient-navy: linear-gradient(135deg, var(--navy-deep), var(--navy) 55%, var(--navy-soft));
   --gradient-gold: linear-gradient(100deg, var(--gold), var(--gold-soft));
   --shadow-card: 0 1px 2px oklch(0.23 0.065 264 / 0.06), 0 12px 30px -18px oklch(0.23 0.065 264 / 0.28);
   --shadow-raised: 0 24px 60px -28px oklch(0.23 0.065 264 / 0.45);
   --shadow-sidebar-hover:
-    0 2px 10px oklch(0 0 0 / 0.38), 0 0 0 1px oklch(1 0 0 / 0.1);
+    0 1px 3px oklch(0.23 0.065 264 / 0.08), 0 0 0 1px oklch(0.23 0.065 264 / 0.06);
   --shadow-sidebar-active:
-    0 0 0 1px oklch(0.82 0.16 88 / 0.45), 0 0 0 3px oklch(0.82 0.16 88 / 0.12),
-    0 8px 22px -6px oklch(0 0 0 / 0.62), 0 2px 8px oklch(0 0 0 / 0.42),
-    inset 0 1px 0 oklch(1 0 0 / 0.12);
+    0 0 0 1px color-mix(in oklab, var(--accent) 45%, transparent),
+    0 0 0 3px color-mix(in oklab, var(--accent) 14%, transparent),
+    0 6px 16px -8px oklch(0.23 0.065 264 / 0.18),
+    inset 0 1px 0 oklch(1 0 0 / 0.65);
 
-  --sidebar: oklch(0.19 0.055 265);
-  --sidebar-foreground: oklch(0.95 0.008 260);
-  --sidebar-primary: oklch(0.82 0.16 88);
-  --sidebar-primary-foreground: oklch(0.2 0.05 264);
-  --sidebar-accent: oklch(0.27 0.06 264);
-  --sidebar-accent-foreground: oklch(0.95 0.008 260);
-  --sidebar-border: oklch(1 0 0 / 12%);
+  --sidebar: oklch(1 0 0);
+  --sidebar-foreground: oklch(0.22 0.045 264);
+  --sidebar-primary: oklch(0.23 0.065 264);
+  --sidebar-primary-foreground: oklch(0.97 0.008 260);
+  --sidebar-accent: oklch(0.955 0.01 255);
+  --sidebar-accent-foreground: oklch(0.22 0.045 264);
+  --sidebar-border: oklch(0.9 0.012 255);
   --sidebar-ring: oklch(0.82 0.16 88);
 
   --chart-1: oklch(0.82 0.16 88);
@@ -124,26 +145,79 @@
   --chart-3: oklch(0.55 0.12 250);
   --chart-4: oklch(0.7 0.14 40);
   --chart-5: oklch(0.45 0.08 300);
+
+  color-scheme: light;
 }
 
 .dark {
-  --background: oklch(0.17 0.055 265);
+  --background: oklch(0.16 0.045 265);
   --foreground: oklch(0.97 0.008 260);
-  --card: oklch(0.23 0.065 264);
+  --card: oklch(0.21 0.05 264);
   --card-foreground: oklch(0.97 0.008 260);
-  --popover: oklch(0.23 0.065 264);
+  --popover: oklch(0.21 0.05 264);
   --popover-foreground: oklch(0.97 0.008 260);
-  --primary: oklch(0.82 0.16 88);
-  --primary-foreground: oklch(0.2 0.05 264);
-  --secondary: oklch(0.27 0.06 264);
-  --secondary-foreground: oklch(0.97 0.008 260);
-  --muted: oklch(0.27 0.06 264);
-  --muted-foreground: oklch(0.72 0.03 258);
+  /* Dark CTAs / selected pills use gold (same as accent). */
+  --primary: var(--accent);
+  --primary-foreground: var(--accent-foreground);
+  --secondary: oklch(0.26 0.05 264);
+  --secondary-foreground: oklch(0.95 0.008 260);
+  --muted: oklch(0.26 0.05 264);
+  /* Match body text in dark — gray muted labels were hard to read. */
+  --muted-foreground: oklch(0.97 0.008 260);
   --accent: oklch(0.82 0.16 88);
   --accent-foreground: oklch(0.2 0.05 264);
-  --border: oklch(1 0 0 / 12%);
-  --input: oklch(1 0 0 / 15%);
+  --icon-tile-bg: var(--accent);
+  --icon-tile-fg: var(--accent-foreground);
+  --icon-badge-bg: color-mix(in oklab, var(--accent) 18%, transparent);
+  --icon-badge-fg: var(--accent);
+  --destructive: oklch(0.65 0.2 25);
+  --destructive-foreground: oklch(0.99 0.005 248);
+  --success: oklch(0.7 0.14 155);
+  --success-foreground: oklch(0.18 0.04 155);
+  --warning: oklch(0.8 0.14 75);
+  --warning-foreground: oklch(0.22 0.045 264);
+  --border: oklch(1 0 0 / 14%);
+  --input: oklch(1 0 0 / 18%);
   --ring: oklch(0.82 0.16 88);
+
+  --soft-accent-bg: color-mix(in oklab, var(--accent) 22%, transparent);
+  --soft-accent-fg: var(--accent);
+  --soft-accent-border: color-mix(in oklab, var(--accent) 45%, transparent);
+  --soft-warning-bg: color-mix(in oklab, var(--warning) 22%, transparent);
+  --soft-warning-fg: var(--warning);
+  --soft-warning-border: color-mix(in oklab, var(--warning) 45%, transparent);
+  --soft-success-bg: color-mix(in oklab, var(--success) 20%, transparent);
+  --soft-success-fg: var(--success);
+  --soft-success-border: color-mix(in oklab, var(--success) 40%, transparent);
+  --soft-primary-bg: color-mix(in oklab, var(--accent) 18%, transparent);
+  --soft-primary-fg: var(--accent);
+  --soft-primary-border: color-mix(in oklab, var(--accent) 40%, transparent);
+
+  --shadow-card: 0 1px 2px oklch(0 0 0 / 0.35), 0 14px 36px -18px oklch(0 0 0 / 0.55);
+  --shadow-raised: 0 28px 64px -28px oklch(0 0 0 / 0.7);
+  --shadow-sidebar-hover:
+    0 2px 12px oklch(0 0 0 / 0.5), 0 0 0 1px oklch(1 0 0 / 0.12);
+  --shadow-sidebar-active:
+    0 0 0 1px oklch(0.82 0.16 88 / 0.5), 0 0 0 3px oklch(0.82 0.16 88 / 0.14),
+    0 10px 24px -6px oklch(0 0 0 / 0.7), 0 2px 8px oklch(0 0 0 / 0.5),
+    inset 0 1px 0 oklch(1 0 0 / 0.1);
+
+  --sidebar: oklch(0.14 0.045 265);
+  --sidebar-foreground: oklch(0.95 0.008 260);
+  --sidebar-primary: oklch(0.82 0.16 88);
+  --sidebar-primary-foreground: oklch(0.2 0.05 264);
+  --sidebar-accent: oklch(0.24 0.05 264);
+  --sidebar-accent-foreground: oklch(0.95 0.008 260);
+  --sidebar-border: oklch(1 0 0 / 12%);
+  --sidebar-ring: oklch(0.82 0.16 88);
+
+  --chart-1: oklch(0.82 0.16 88);
+  --chart-2: oklch(0.7 0.14 155);
+  --chart-3: oklch(0.68 0.12 250);
+  --chart-4: oklch(0.75 0.14 40);
+  --chart-5: oklch(0.62 0.1 300);
+
+  color-scheme: dark;
 }
 
 @layer base {
@@ -202,6 +276,61 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-card);
+}
+
+/** Brand icon tile: navy+gold (light) / gold+navy (dark) for contrast on any surface. */
+@utility icon-tile {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  background-color: var(--icon-tile-bg);
+  color: var(--icon-tile-fg);
+}
+
+/** Soft icon badge for list rows and meta chips — visible in light and dark. */
+@utility icon-badge {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  background-color: var(--icon-badge-bg);
+  color: var(--icon-badge-fg);
+}
+
+/** Soft accent / warning / success / primary status chips (readable in both themes). */
+@utility soft-badge-accent {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--soft-accent-bg);
+  color: var(--soft-accent-fg);
+  border-color: var(--soft-accent-border);
+}
+
+@utility soft-badge-warning {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--soft-warning-bg);
+  color: var(--soft-warning-fg);
+  border-color: var(--soft-warning-border);
+}
+
+@utility soft-badge-success {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--soft-success-bg);
+  color: var(--soft-success-fg);
+  border-color: var(--soft-success-border);
+}
+
+@utility soft-badge-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--soft-primary-bg);
+  color: var(--soft-primary-fg);
+  border-color: var(--soft-primary-border);
 }
 
 @utility gold-rule {
